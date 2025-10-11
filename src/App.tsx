@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import TestPage from "./pages/TestPage";
 import ScoringPage from "./pages/ScoringPage";
+import ResultsPage from "./pages/ResultsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ScoringPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/results"
+              element={
+                <ProtectedRoute>
+                  <ResultsPage />
                 </ProtectedRoute>
               }
             />

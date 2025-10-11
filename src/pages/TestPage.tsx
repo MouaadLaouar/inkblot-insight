@@ -5,8 +5,20 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Loader2, TestTube2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { ArrowLeft, Plus, Loader2, TestTube2, Trash } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useQuery } from "@tanstack/react-query";
 
 interface Patient {
   id: string;
@@ -26,37 +38,63 @@ const TestPage = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [tests, setTests] = useState<Test[]>([]);
-  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [testToDelete, setTestToDelete] = useState<Test | null>(null);
+
+  console.log("TestPage: patientId", patientId);
+  console.log("TestPage: user", user);
+
+  const { data: tests, isLoading, refetch } = useQuery<Test[]>({
+    queryKey: ["tests", patientId],
+    queryFn: async () => {
+      if (!patientId) return [];
+      const { data, error } = await supabase
+        .from("rorschach_tests")
+        .select("*")
+        .eq("patient_id", patientId)
+        .order("test_date", { ascending: false });
+      if (error) {
+        console.error("Error fetching tests:", error);
+        throw new Error(error.message);
+      }
+      console.log("TestPage: fetched tests", data);
+      return data;
+    },
+    enabled: !!patientId,
+  });
 
   useEffect(() => {
-    loadData();
+    console.log("TestPage: useEffect triggered");
+    loadPatientData();
   }, [patientId, user]);
 
-  const loadData = async () => {
-    if (!user || !patientId) return;
+  const loadPatientData = async () => {
+    if (!user || !patientId) {
+      console.log("TestPage: loadPatientData skipped, user or patientId missing");
+      return;
+    }
 
     try {
-      const [patientResult, testsResult] = await Promise.all([
-        supabase.from("patients").select("*").eq("id", patientId).single(),
-        supabase.from("rorschach_tests").select("*").eq("patient_id", patientId).order("test_date", { ascending: false }),
-      ]);
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("id", patientId)
+        .single();
 
-      if (patientResult.error) throw patientResult.error;
-      if (testsResult.error) throw testsResult.error;
+      if (error) throw error;
 
-      setPatient(patientResult.data);
-      setTests(testsResult.data || []);
+      setPatient(data);
+      console.log("TestPage: fetched patient", data);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading patient data:", error);
       toast({
-        title: "Error loading data",
+        title: "Error loading patient data",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      // setLoading(false); // This was removed as isLoading is handled by useQuery
     }
   };
 
@@ -94,7 +132,35 @@ const TestPage = () => {
     }
   };
 
-  if (loading) {
+  const handleDeleteTest = async () => {
+    if (!testToDelete) return;
+
+    const { error } = await supabase
+      .from("rorschach_tests")
+      .delete()
+      .eq("id", testToDelete.id);
+
+    if (error) {
+      toast({
+        title: "Error deleting test",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Test deleted",
+        description: "The test has been successfully deleted.",
+      });
+      refetch();
+    }
+    setTestToDelete(null);
+  };
+
+  console.log("TestPage: isLoading", isLoading);
+  console.log("TestPage: patient", patient);
+  console.log("TestPage: tests", tests);
+
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -152,13 +218,13 @@ const TestPage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            {tests.length === 0 ? (
+            {tests && tests.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
                 No tests found. Create a new test to get started.
               </div>
             ) : (
               <div className="space-y-3">
-                {tests.map((test) => (
+                {tests?.map((test) => (
                   <Card
                     key={test.id}
                     className="cursor-pointer transition-all hover:shadow-soft"
@@ -178,11 +244,49 @@ const TestPage = () => {
                           </p>
                         </div>
                       </div>
-                      <Badge
-                        variant={test.status === "completed" ? "default" : "secondary"}
-                      >
-                        {test.status.replace("_", " ")}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={test.status === "completed" ? "default" : "secondary"}
+                        >
+                          {test.status.replace("_", " ")}
+                        </Badge>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTestToDelete(test);
+                              }}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Are you absolutely sure?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete
+                                your test and remove all associated data.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTest();
+                                }}
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

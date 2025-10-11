@@ -67,7 +67,8 @@ const Auth = () => {
         }
       } else {
         // Sign Up logic
-        const redirectUrl = `${window.location.origin}/`;
+        // TODO: change this
+        const redirectUrl = `https://inkblot-insight.vercel.app/`;
         const { data, error } = await supabase.auth.signUp({
           email: validation.email,
           password: validation.password,
