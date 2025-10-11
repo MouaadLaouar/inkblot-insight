@@ -119,10 +119,16 @@ const Dashboard = () => {
                 <CardTitle>Patients</CardTitle>
                 <CardDescription>Manage your patient records</CardDescription>
               </div>
-              <Button onClick={() => setShowPatientDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Patient
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowPatientDialog(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Patient
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/results")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  View Sample Results
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
