@@ -8,15 +8,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Loader2, CheckCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, CheckCircle, Trash2, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  ColumnDef,
+} from "@tanstack/react-table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import SelectionModal from "@/components/SelectionModal";
+import { LOCATION_OPTIONS, DETERMINANT_OPTIONS, CONTENT_OPTIONS } from "@/lib/rorschachConstants";
 
 const responseSchema = z.object({
   responseText: z.string().min(1, "Response text is required").max(1000),
   location: z.string().max(100).optional(),
   determinants: z.array(z.string()).optional(),
   contentCategories: z.array(z.string()).optional(),
+  cValue: z.string().optional(),
+  ban: z.string().optional(),
+  obs: z.string().optional(),
+  intenseTime: z.number().optional(),
 });
 
 interface TestData {
@@ -39,6 +52,10 @@ interface Response {
   location: string | null;
   determinants: string[];
   content_categories: string[];
+  c_value: string | null;
+  ban: string | null;
+  obs: string | null;
+  intense_time: number | null;
 }
 
 const ScoringPage = () => {
@@ -53,9 +70,18 @@ const ScoringPage = () => {
   const [newResponse, setNewResponse] = useState({
     responseText: "",
     location: "",
-    determinants: "",
-    contentCategories: "",
+    determinants: [] as string[],
+    contentCategories: [] as string[],
+    cValue: "",
+    ban: "",
+    obs: "",
+    intenseTime: "",
   });
+  
+  const [modalState, setModalState] = useState<{
+    type: "location" | "determinants" | "content" | null;
+    open: boolean;
+  }>({ type: null, open: false });
 
   useEffect(() => {
     loadTestData();
@@ -94,8 +120,12 @@ const ScoringPage = () => {
       const validation = responseSchema.parse({
         responseText: newResponse.responseText,
         location: newResponse.location || undefined,
-        determinants: newResponse.determinants ? newResponse.determinants.split(",").map(d => d.trim()) : [],
-        contentCategories: newResponse.contentCategories ? newResponse.contentCategories.split(",").map(c => c.trim()) : [],
+        determinants: newResponse.determinants,
+        contentCategories: newResponse.contentCategories,
+        cValue: newResponse.cValue || undefined,
+        ban: newResponse.ban || undefined,
+        obs: newResponse.obs || undefined,
+        intenseTime: newResponse.intenseTime ? parseInt(newResponse.intenseTime) : undefined,
       });
 
       const cardResponses = responses.filter(r => r.card_number === selectedCard);
@@ -109,6 +139,10 @@ const ScoringPage = () => {
         location: validation.location || null,
         determinants: validation.determinants || [],
         content_categories: validation.contentCategories || [],
+        c_value: validation.cValue || null,
+        ban: validation.ban || null,
+        obs: validation.obs || null,
+        intense_time: validation.intenseTime || null,
       });
 
       if (error) throw error;
@@ -124,7 +158,16 @@ const ScoringPage = () => {
         description: `Card ${selectedCard}, Response ${nextResponseNumber} saved`,
       });
 
-      setNewResponse({ responseText: "", location: "", determinants: "", contentCategories: "" });
+      setNewResponse({ 
+        responseText: "", 
+        location: "", 
+        determinants: [], 
+        contentCategories: [],
+        cValue: "",
+        ban: "",
+        obs: "",
+        intenseTime: "",
+      });
       loadTestData();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -225,6 +268,104 @@ const ScoringPage = () => {
 
   const cardResponses = responses.filter(r => r.card_number === selectedCard);
 
+  const columns: ColumnDef<Response>[] = [
+    {
+      accessorKey: "response_number",
+      header: "Resp #",
+      cell: ({ row }) => <Badge variant="outline">{row.original.response_number}</Badge>,
+    },
+    {
+      accessorKey: "card_number",
+      header: "Card",
+      cell: ({ row }) => <span className="font-medium">{row.original.card_number}</span>,
+    },
+    {
+      accessorKey: "response_text",
+      header: "Response Text",
+      cell: ({ row }) => (
+        <div className="max-w-md">
+          <p className="text-sm line-clamp-2">{row.original.response_text}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "location",
+      header: "Location",
+      cell: ({ row }) => <span className="text-sm">{row.original.location || "-"}</span>,
+    },
+    {
+      accessorKey: "determinants",
+      header: "D",
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.determinants.join(", ") || "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "c_value",
+      header: "C",
+      cell: ({ row }) => <span className="text-sm">{row.original.c_value || "-"}</span>,
+    },
+    {
+      accessorKey: "ban",
+      header: "Ban",
+      cell: ({ row }) => <span className="text-sm">{row.original.ban || "-"}</span>,
+    },
+    {
+      accessorKey: "obs",
+      header: "Obs",
+      cell: ({ row }) => <span className="text-sm">{row.original.obs || "-"}</span>,
+    },
+    {
+      accessorKey: "intense_time",
+      header: "Time",
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.intense_time ? `${row.original.intense_time}s` : "-"}</span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => deleteResponse(row.original.id)}
+          disabled={saving || test?.status === "completed"}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      ),
+    },
+  ];
+
+  const table = useReactTable({
+    data: cardResponses,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const handleModalSelect = (value: string) => {
+    if (modalState.type === "location") {
+      setNewResponse({ ...newResponse, location: value });
+    } else if (modalState.type === "determinants") {
+      const current = newResponse.determinants;
+      setNewResponse({
+        ...newResponse,
+        determinants: current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value],
+      });
+    } else if (modalState.type === "content") {
+      const current = newResponse.contentCategories;
+      setNewResponse({
+        ...newResponse,
+        contentCategories: current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value],
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-clinical-gray/20 to-background">
       <header className="border-b bg-card/50 backdrop-blur-sm">
@@ -303,37 +444,95 @@ const ScoringPage = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={newResponse.location}
-                  onChange={(e) => setNewResponse({ ...newResponse, location: e.target.value })}
-                  placeholder="W, D, Dd, S"
-                  disabled={saving || test.status === "completed"}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setModalState({ type: "location", open: true })}
+                    disabled={saving || test.status === "completed"}
+                  >
+                    {newResponse.location || "Select Location"}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Determinants (D)</Label>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setModalState({ type: "determinants", open: true })}
+                    disabled={saving || test.status === "completed"}
+                  >
+                    {newResponse.determinants.length > 0
+                      ? newResponse.determinants.join(", ")
+                      : "Select Determinants"}
+                  </Button>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="determinants">Determinants</Label>
-                <Input
-                  id="determinants"
-                  value={newResponse.determinants}
-                  onChange={(e) => setNewResponse({ ...newResponse, determinants: e.target.value })}
-                  placeholder="F, M, C, FC (comma-separated)"
-                  disabled={saving || test.status === "completed"}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Content (C)</Label>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => setModalState({ type: "content", open: true })}
+                    disabled={saving || test.status === "completed"}
+                  >
+                    {newResponse.contentCategories.length > 0
+                      ? newResponse.contentCategories.join(", ")
+                      : "Select Content"}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cValue">C Value</Label>
+                  <Input
+                    id="cValue"
+                    value={newResponse.cValue}
+                    onChange={(e) => setNewResponse({ ...newResponse, cValue: e.target.value })}
+                    placeholder="Enter C value"
+                    disabled={saving || test.status === "completed"}
+                  />
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="content">Content Categories</Label>
-                <Input
-                  id="content"
-                  value={newResponse.contentCategories}
-                  onChange={(e) => setNewResponse({ ...newResponse, contentCategories: e.target.value })}
-                  placeholder="H, A, An, Obj (comma-separated)"
-                  disabled={saving || test.status === "completed"}
-                />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ban">Ban</Label>
+                  <Input
+                    id="ban"
+                    value={newResponse.ban}
+                    onChange={(e) => setNewResponse({ ...newResponse, ban: e.target.value })}
+                    placeholder="Ban"
+                    disabled={saving || test.status === "completed"}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="obs">Obs</Label>
+                  <Input
+                    id="obs"
+                    value={newResponse.obs}
+                    onChange={(e) => setNewResponse({ ...newResponse, obs: e.target.value })}
+                    placeholder="Obs"
+                    disabled={saving || test.status === "completed"}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="intenseTime">Time (seconds)</Label>
+                  <Input
+                    id="intenseTime"
+                    type="number"
+                    value={newResponse.intenseTime}
+                    onChange={(e) => setNewResponse({ ...newResponse, intenseTime: e.target.value })}
+                    placeholder="0"
+                    disabled={saving || test.status === "completed"}
+                  />
+                </div>
               </div>
 
               {test.status !== "completed" && (
@@ -350,7 +549,7 @@ const ScoringPage = () => {
           </Card>
         </div>
 
-        {/* Existing Responses */}
+        {/* Existing Responses Table */}
         {cardResponses.length > 0 && (
           <Card className="shadow-card">
             <CardHeader>
@@ -358,40 +557,81 @@ const ScoringPage = () => {
               <CardDescription>{cardResponses.length} response(s) recorded</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {cardResponses.map((response) => (
-                  <Card key={response.id}>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between">
-                          <Badge>Response {response.response_number}</Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteResponse(response.id)}
-                            disabled={saving || test.status === "completed"}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                        <p className="text-sm font-medium">{response.response_text}</p>
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          {response.location && <span>Location: {response.location}</span>}
-                          {response.determinants.length > 0 && (
-                            <span>Determinants: {response.determinants.join(", ")}</span>
-                          )}
-                          {response.content_categories.length > 0 && (
-                            <span>Content: {response.content_categories.join(", ")}</span>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id}>
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext()
+                                )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows?.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
+                        >
+                          No responses recorded for this card yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Selection Modals */}
+        <SelectionModal
+          open={modalState.type === "location" && modalState.open}
+          onOpenChange={(open) => setModalState({ ...modalState, open })}
+          title="Select Location"
+          options={LOCATION_OPTIONS}
+          onSelect={handleModalSelect}
+        />
+        <SelectionModal
+          open={modalState.type === "determinants" && modalState.open}
+          onOpenChange={(open) => setModalState({ ...modalState, open })}
+          title="Select Determinants"
+          options={DETERMINANT_OPTIONS}
+          onSelect={handleModalSelect}
+          multiSelect
+          selectedValues={newResponse.determinants}
+        />
+        <SelectionModal
+          open={modalState.type === "content" && modalState.open}
+          onOpenChange={(open) => setModalState({ ...modalState, open })}
+          title="Select Content Categories"
+          options={CONTENT_OPTIONS}
+          onSelect={handleModalSelect}
+          multiSelect
+          selectedValues={newResponse.contentCategories}
+        />
       </main>
     </div>
   );
