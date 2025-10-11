@@ -83,6 +83,85 @@ const ScoringPage = () => {
     open: boolean;
   }>({ type: null, open: false });
 
+  // Table columns definition - must be before any conditional returns
+  const columns: ColumnDef<Response>[] = [
+    {
+      accessorKey: "response_number",
+      header: "Resp #",
+      cell: ({ row }) => <Badge variant="outline">{row.original.response_number}</Badge>,
+    },
+    {
+      accessorKey: "card_number",
+      header: "Card",
+      cell: ({ row }) => <span className="font-medium">{row.original.card_number}</span>,
+    },
+    {
+      accessorKey: "response_text",
+      header: "Response Text",
+      cell: ({ row }) => (
+        <div className="max-w-md">
+          <p className="text-sm line-clamp-2">{row.original.response_text}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "location",
+      header: "Location",
+      cell: ({ row }) => <span className="text-sm">{row.original.location || "-"}</span>,
+    },
+    {
+      accessorKey: "determinants",
+      header: "D",
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.determinants.join(", ") || "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "c_value",
+      header: "C",
+      cell: ({ row }) => <span className="text-sm">{row.original.c_value || "-"}</span>,
+    },
+    {
+      accessorKey: "ban",
+      header: "Ban",
+      cell: ({ row }) => <span className="text-sm">{row.original.ban || "-"}</span>,
+    },
+    {
+      accessorKey: "obs",
+      header: "Obs",
+      cell: ({ row }) => <span className="text-sm">{row.original.obs || "-"}</span>,
+    },
+    {
+      accessorKey: "intense_time",
+      header: "Time",
+      cell: ({ row }) => (
+        <span className="text-sm">{row.original.intense_time ? `${row.original.intense_time}s` : "-"}</span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => deleteResponse(row.original.id)}
+          disabled={saving || test?.status === "completed"}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      ),
+    },
+  ];
+
+  const cardResponses = responses.filter(r => r.card_number === selectedCard);
+  
+  const table = useReactTable({
+    data: cardResponses,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   useEffect(() => {
     loadTestData();
   }, [testId, user]);
@@ -265,84 +344,6 @@ const ScoringPage = () => {
       </div>
     );
   }
-
-  const cardResponses = responses.filter(r => r.card_number === selectedCard);
-
-  const columns: ColumnDef<Response>[] = [
-    {
-      accessorKey: "response_number",
-      header: "Resp #",
-      cell: ({ row }) => <Badge variant="outline">{row.original.response_number}</Badge>,
-    },
-    {
-      accessorKey: "card_number",
-      header: "Card",
-      cell: ({ row }) => <span className="font-medium">{row.original.card_number}</span>,
-    },
-    {
-      accessorKey: "response_text",
-      header: "Response Text",
-      cell: ({ row }) => (
-        <div className="max-w-md">
-          <p className="text-sm line-clamp-2">{row.original.response_text}</p>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "location",
-      header: "Location",
-      cell: ({ row }) => <span className="text-sm">{row.original.location || "-"}</span>,
-    },
-    {
-      accessorKey: "determinants",
-      header: "D",
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.determinants.join(", ") || "-"}</span>
-      ),
-    },
-    {
-      accessorKey: "c_value",
-      header: "C",
-      cell: ({ row }) => <span className="text-sm">{row.original.c_value || "-"}</span>,
-    },
-    {
-      accessorKey: "ban",
-      header: "Ban",
-      cell: ({ row }) => <span className="text-sm">{row.original.ban || "-"}</span>,
-    },
-    {
-      accessorKey: "obs",
-      header: "Obs",
-      cell: ({ row }) => <span className="text-sm">{row.original.obs || "-"}</span>,
-    },
-    {
-      accessorKey: "intense_time",
-      header: "Time",
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.intense_time ? `${row.original.intense_time}s` : "-"}</span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => deleteResponse(row.original.id)}
-          disabled={saving || test?.status === "completed"}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      ),
-    },
-  ];
-
-  const table = useReactTable({
-    data: cardResponses,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
 
   const handleModalSelect = (value: string) => {
     if (modalState.type === "location") {
