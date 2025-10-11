@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Loader2, CheckCircle } from "lucide-react";
+import { ArrowLeft, Save, Loader2, CheckCircle, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -168,6 +168,37 @@ const ScoringPage = () => {
         title: "Error completing test",
         variant: "destructive",
       });
+    }
+  };
+
+  const deleteResponse = async (responseId: string) => {
+    if (!user || !testId) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("test_responses").delete().eq("id", responseId);
+
+      if (error) throw error;
+
+      // Update total responses count
+      await supabase
+        .from("rorschach_tests")
+        .update({ total_responses: responses.length - 1 })
+        .eq("id", testId);
+
+      toast({
+        title: "Response deleted",
+        description: "Response successfully removed.",
+      });
+      loadTestData();
+    } catch (error) {
+      console.error("Error deleting response:", error);
+      toast({
+        title: "Error deleting response",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -334,6 +365,14 @@ const ScoringPage = () => {
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
                           <Badge>Response {response.response_number}</Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteResponse(response.id)}
+                            disabled={saving || test.status === "completed"}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
                         </div>
                         <p className="text-sm font-medium">{response.response_text}</p>
                         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">

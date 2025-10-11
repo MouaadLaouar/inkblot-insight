@@ -33,9 +33,9 @@ const Auth = () => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
+      setLoading(true);
       const validation = authSchema.parse({
         email,
         password,
@@ -66,8 +66,9 @@ const Auth = () => {
           navigate("/dashboard");
         }
       } else {
+        // Sign Up logic
         const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: validation.email,
           password: validation.password,
           options: {
@@ -86,14 +87,44 @@ const Auth = () => {
               variant: "destructive",
             });
           } else {
+            toast({
+              title: "Error signing up",
+              description: error.message,
+              variant: "destructive",
+            });
             throw error;
           }
-        } else {
+        } else if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                full_name: validation.fullName,
+              },
+            ]);
+
+          if (profileError) {
+            console.error("Error inserting profile:", profileError);
+            toast({
+              title: "Error creating profile",
+              description: profileError.message,
+              variant: "destructive",
+            });
+            throw profileError;
+          }
+
           toast({
             title: "Account created!",
             description: "You can now sign in",
           });
           navigate("/dashboard");
+        } else {
+          toast({
+            title: "Error",
+            description: "An unexpected error occurred after sign up.",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {

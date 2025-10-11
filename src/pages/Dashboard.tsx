@@ -16,6 +16,7 @@ interface DashboardStats {
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalPatients: 0,
@@ -33,10 +34,13 @@ const Dashboard = () => {
     if (!user) return;
 
     try {
+
       const [patientsResult, testsResult] = await Promise.all([
-        supabase.from("patients").select("id", { count: "exact", head: true }),
-        supabase.from("rorschach_tests").select("id, status", { count: "exact" }),
+        supabase.from("patients").select("id", { count: "exact" }).eq("created_by", user.id),
+        supabase.from("rorschach_tests").select("id, status", { count: "exact" }).eq("created_by", user.id),
       ]);
+
+
 
       const completedTests = testsResult.data?.filter(t => t.status === "completed").length || 0;
 

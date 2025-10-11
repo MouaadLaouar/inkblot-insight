@@ -60,6 +60,7 @@ export const PatientList = ({ onRefresh }: PatientListProps) => {
       const { data, error } = await supabase
         .from("patients")
         .select("*")
+        .eq("created_by", user.id)
         .order("last_name", { ascending: true });
 
       if (error) throw error;
