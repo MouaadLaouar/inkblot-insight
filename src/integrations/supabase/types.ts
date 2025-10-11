@@ -138,13 +138,17 @@ export type Database = {
       }
       test_responses: {
         Row: {
+          ban: string | null
+          c_value: string | null
           card_number: number
           content_categories: string[] | null
           created_at: string | null
           determinants: string[] | null
           form_quality: string | null
           id: string
+          intense_time: number | null
           location: string | null
+          obs: string | null
           popular_response: boolean | null
           response_number: number
           response_text: string
@@ -152,13 +156,17 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          ban?: string | null
+          c_value?: string | null
           card_number: number
           content_categories?: string[] | null
           created_at?: string | null
           determinants?: string[] | null
           form_quality?: string | null
           id?: string
+          intense_time?: number | null
           location?: string | null
+          obs?: string | null
           popular_response?: boolean | null
           response_number: number
           response_text: string
@@ -166,13 +174,17 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          ban?: string | null
+          c_value?: string | null
           card_number?: number
           content_categories?: string[] | null
           created_at?: string | null
           determinants?: string[] | null
           form_quality?: string | null
           id?: string
+          intense_time?: number | null
           location?: string | null
+          obs?: string | null
           popular_response?: boolean | null
           response_number?: number
           response_text?: string
