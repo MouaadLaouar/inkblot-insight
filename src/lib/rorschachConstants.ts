@@ -1,62 +1,76 @@
+// Location codes based on Rorschach scoring system
 export const LOCATION_OPTIONS = [
-  { value: "W", label: "W - Whole", description: "Response involves the entire blot" },
-  { value: "D", label: "D - Common Detail", description: "Common detail area" },
-  { value: "Dd", label: "Dd - Unusual Detail", description: "Unusual detail area" },
-  { value: "S", label: "S - White Space", description: "White space response" },
-  { value: "DdS", label: "DdS - Detail + Space", description: "Unusual detail with white space" },
+  { value: "G", label: "G - Globale", description: "Whole blot response (entire inkblot)" },
+  { value: "D", label: "D - Détail", description: "Common detail area (frequently selected)" },
+  { value: "Dd", label: "Dd - Détail rare", description: "Unusual/rare detail area (infrequently selected)" },
+  { value: "Dbl", label: "Dbl - Détail blanc", description: "White space detail" },
+  { value: "Ddbl", label: "Ddbl - Détail blanc rare", description: "Rare white space detail" },
+  { value: "Do", label: "Do - Détail oligophrénique", description: "Oligophrenic detail (very small, inappropriate area)" },
 ];
 
+// Determinants based on Rorschach scoring system
 export const DETERMINANT_OPTIONS = [
-  { value: "F", label: "F - Form", description: "Form only" },
-  { value: "M", label: "M - Human Movement", description: "Human movement" },
-  { value: "FM", label: "FM - Animal Movement", description: "Animal movement" },
-  { value: "m", label: "m - Inanimate Movement", description: "Inanimate movement" },
-  { value: "C", label: "C - Pure Color", description: "Pure color" },
-  { value: "FC", label: "FC - Form-Color", description: "Form with color" },
-  { value: "CF", label: "CF - Color-Form", description: "Color with form" },
-  { value: "C'", label: "C' - Achromatic Color", description: "Black, white, gray" },
-  { value: "FC'", label: "FC' - Form-Achromatic", description: "Form with achromatic color" },
-  { value: "C'F", label: "C'F - Achromatic-Form", description: "Achromatic color with form" },
-  { value: "T", label: "T - Texture", description: "Texture response" },
-  { value: "FT", label: "FT - Form-Texture", description: "Form with texture" },
-  { value: "TF", label: "TF - Texture-Form", description: "Texture with form" },
-  { value: "V", label: "V - Vista", description: "Vista/depth" },
-  { value: "FV", label: "FV - Form-Vista", description: "Form with vista" },
-  { value: "VF", label: "VF - Vista-Form", description: "Vista with form" },
-  { value: "Y", label: "Y - Shading", description: "Diffuse shading" },
-  { value: "FY", label: "FY - Form-Shading", description: "Form with shading" },
-  { value: "YF", label: "YF - Shading-Form", description: "Shading with form" },
-  { value: "Fr", label: "Fr - Reflection", description: "Reflection" },
-  { value: "rF", label: "rF - Reflection-Form", description: "Reflection with form" },
-  { value: "FD", label: "FD - Form Dimension", description: "Form-based dimensionality" },
+  // Form determinants
+  { value: "F+", label: "F+ - Forme bonne", description: "Good form quality" },
+  { value: "F-", label: "F- - Forme mauvaise", description: "Poor form quality" },
+  { value: "F+-", label: "F+- - Forme élargie", description: "Extended/approximate form" },
+  { value: "F", label: "F - Forme", description: "Pure form (neutral quality)" },
+  
+  // Chromatic color determinants
+  { value: "C", label: "C - Couleur pure", description: "Pure color (no form)" },
+  { value: "CF", label: "CF - Couleur-Forme", description: "Color dominates form" },
+  { value: "FC", label: "FC - Forme-Couleur", description: "Form dominates color" },
+  
+  // Achromatic color determinants
+  { value: "C'", label: "C' - Couleur achromatique", description: "Pure achromatic (black, white, gray)" },
+  { value: "C'F", label: "C'F - Couleur achromatique-Forme", description: "Achromatic color dominates form" },
+  { value: "FC'", label: "FC' - Forme-Couleur achromatique", description: "Form dominates achromatic color" },
+  
+  // Shading determinants (estompage)
+  { value: "E", label: "E - Estompage", description: "Pure shading/diffusion" },
+  { value: "EF", label: "EF - Estompage-Forme", description: "Shading dominates form" },
+  { value: "FE", label: "FE - Forme-Estompage", description: "Form dominates shading" },
+  
+  // Movement determinants (kinesthésies)
+  { value: "K", label: "K - Kinesthésie humaine", description: "Human movement (major)" },
+  { value: "Kp", label: "Kp - Kinesthésie partielle", description: "Partial human movement" },
+  { value: "kan", label: "kan - Kinesthésie animale", description: "Animal movement" },
+  { value: "kob", label: "kob - Kinesthésie objet", description: "Inanimate/object movement" },
+  
+  // Clair-obscur (chiaroscuro/darkness)
+  { value: "Clob", label: "Clob - Clair-obscur pur", description: "Pure dark/threatening impression" },
+  { value: "ClobF", label: "ClobF - Clair-obscur-Forme", description: "Dark impression dominates form" },
+  { value: "FClob", label: "FClob - Forme-Clair-obscur", description: "Form dominates dark impression" },
 ];
 
+// Content categories based on Rorschach scoring system
 export const CONTENT_OPTIONS = [
-  { value: "H", label: "H - Human", description: "Whole human figure" },
-  { value: "(H)", label: "(H) - (Human)", description: "Fictional or mythological human" },
-  { value: "Hd", label: "Hd - Human Detail", description: "Part of human" },
-  { value: "(Hd)", label: "(Hd) - (Human Detail)", description: "Fictional human part" },
-  { value: "Hx", label: "Hx - Human Experience", description: "Human emotion/experience" },
-  { value: "A", label: "A - Animal", description: "Whole animal" },
-  { value: "(A)", label: "(A) - (Animal)", description: "Fictional animal" },
-  { value: "Ad", label: "Ad - Animal Detail", description: "Part of animal" },
-  { value: "(Ad)", label: "(Ad) - (Animal Detail)", description: "Fictional animal part" },
-  { value: "An", label: "An - Anatomy", description: "Anatomy, bones, organs" },
-  { value: "Art", label: "Art - Art", description: "Art, painting, sculpture" },
-  { value: "Ay", label: "Ay - Anthropology", description: "Anthropological, cultural items" },
-  { value: "Bl", label: "Bl - Blood", description: "Blood" },
-  { value: "Bt", label: "Bt - Botany", description: "Plants, trees, flowers" },
-  { value: "Cg", label: "Cg - Clothing", description: "Clothing, garments" },
-  { value: "Cl", label: "Cl - Clouds", description: "Clouds" },
-  { value: "Ex", label: "Ex - Explosion", description: "Explosion, fireworks" },
-  { value: "Fi", label: "Fi - Fire", description: "Fire, flames" },
-  { value: "Fd", label: "Fd - Food", description: "Food items" },
-  { value: "Ge", label: "Ge - Geography", description: "Maps, geographical features" },
-  { value: "Hh", label: "Hh - Household", description: "Household items" },
-  { value: "Ls", label: "Ls - Landscape", description: "Landscape, scenery" },
-  { value: "Na", label: "Na - Nature", description: "Natural phenomena" },
-  { value: "Sc", label: "Sc - Science", description: "Science, microscopic" },
-  { value: "Sx", label: "Sx - Sex", description: "Sexual content" },
-  { value: "Xy", label: "Xy - X-ray", description: "X-ray, transparency" },
-  { value: "Idio", label: "Idio - Idiographic", description: "Unique, personal meaning" },
+  // Human content
+  { value: "H", label: "H - Humain", description: "Whole human figure (real)" },
+  { value: "(H)", label: "(H) - (Humain)", description: "Fictional/mythological human figure" },
+  { value: "Hd", label: "Hd - Détail humain", description: "Human detail/body part" },
+  { value: "(Hd)", label: "(Hd) - (Détail humain)", description: "Fictional human detail" },
+  
+  // Animal content
+  { value: "A", label: "A - Animal", description: "Whole animal figure (real)" },
+  { value: "(A)", label: "(A) - (Animal)", description: "Fictional/mythological animal" },
+  { value: "Ad", label: "Ad - Détail animal", description: "Animal detail/body part" },
+  { value: "(Ad)", label: "(Ad) - (Détail animal)", description: "Fictional animal detail" },
+  
+  // Anatomy and sexuality
+  { value: "Anat", label: "Anat - Anatomie", description: "Anatomy (organs, bones, X-rays)" },
+  { value: "Sex", label: "Sex - Sexuel", description: "Sexual organs or content" },
+  
+  // Nature and geography
+  { value: "Nat", label: "Nat - Nature", description: "Natural phenomena (sky, water)" },
+  { value: "Géo", label: "Géo - Géographie", description: "Geographic features (maps, islands)" },
+  { value: "Bot", label: "Bot - Botanique", description: "Plants, flowers, trees" },
+  
+  // Objects and constructions
+  { value: "Obj", label: "Obj - Objet", description: "Objects, tools, everyday items" },
+  { value: "Arch", label: "Arch - Architecture", description: "Buildings, architectural elements" },
+  { value: "Art", label: "Art - Art", description: "Art objects, paintings, sculptures" },
+  
+  // Abstract
+  { value: "Abs", label: "Abs - Abstrait", description: "Abstract concepts, symbols" },
 ];

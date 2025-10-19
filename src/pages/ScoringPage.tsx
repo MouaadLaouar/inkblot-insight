@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Loader2, CheckCircle, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash2, Plus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { z } from "zod";
 import {
   useReactTable,
   getCoreRowModel,
@@ -21,23 +20,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import SelectionModal from "@/components/SelectionModal";
 import { LOCATION_OPTIONS, DETERMINANT_OPTIONS, CONTENT_OPTIONS } from "@/lib/rorschachConstants";
 
-const responseSchema = z.object({
-  responseText: z.string().min(1, "Response text is required").max(1000),
-  location: z.string().max(100).optional(),
-  determinants: z.array(z.string()).optional(),
-  contentCategories: z.array(z.string()).optional(),
-  cValue: z.string().optional(),
-  ban: z.string().optional(),
-  obs: z.string().optional(),
-  intenseTime: z.number().optional(),
-});
-
 interface TestData {
   id: string;
   patient_id: string;
   test_date: string;
   status: string;
-  notes: string | null;
   patients: {
     first_name: string;
     last_name: string;
@@ -50,130 +37,184 @@ interface Response {
   response_number: number;
   response_text: string;
   location: string | null;
-  determinants: string[];
-  content_categories: string[];
-  c_value: string | null;
-  ban: string | null;
+  determinants: string | null;
+  content_categories: string | null;
+  ban: boolean;
   obs: string | null;
   intense_time: number | null;
+  response_time: number | null;
 }
+
+interface NewResponseForm {
+  responseText: string;
+  location: string;
+  determinants: string;
+  contentCategories: string;
+  ban: boolean;
+  obs: string;
+  intenseTime: { minutes: string; seconds: string };
+  responseTime: { minutes: string; seconds: string };
+}
+
+const INITIAL_FORM_STATE: NewResponseForm = {
+  responseText: "",
+  location: "",
+  determinants: "",
+  contentCategories: "",
+  ban: false,
+  obs: "",
+  intenseTime: { minutes: "", seconds: "" },
+  responseTime: { minutes: "", seconds: "" },
+};
 
 const ScoringPage = () => {
   const { testId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
   const [test, setTest] = useState<TestData | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [responses, setResponses] = useState<any[]>([]);
+  const [responses, setResponses] = useState<Response[]>([]);
   const [selectedCard, setSelectedCard] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newResponse, setNewResponse] = useState({
-    responseText: "",
-    location: "",
-    determinants: [] as string[],
-    contentCategories: [] as string[],
-    cValue: "",
-    ban: "",
-    obs: "",
-    intenseTime: "",
-  });
-  
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [newResponse, setNewResponse] = useState<NewResponseForm>(INITIAL_FORM_STATE);
   const [modalState, setModalState] = useState<{
     type: "location" | "determinants" | "content" | null;
     open: boolean;
   }>({ type: null, open: false });
 
-  // Table columns definition - must be before any conditional returns
-  const columns: ColumnDef<Response>[] = [
-    {
-      accessorKey: "response_number",
-      header: "Resp #",
-      cell: ({ row }) => <Badge variant="outline">{row.original.response_number}</Badge>,
-    },
-    {
-      accessorKey: "card_number",
-      header: "Card",
-      cell: ({ row }) => <span className="font-medium">{row.original.card_number}</span>,
-    },
-    {
-      accessorKey: "response_text",
-      header: "Response Text",
-      cell: ({ row }) => (
-        <div className="max-w-md">
-          <p className="text-sm line-clamp-2">{row.original.response_text}</p>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "location",
-      header: "Location",
-      cell: ({ row }) => <span className="text-sm">{row.original.location || "-"}</span>,
-    },
-    {
-      accessorKey: "determinants",
-      header: "D",
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.determinants.join(", ") || "-"}</span>
-      ),
-    },
-    {
-      accessorKey: "c_value",
-      header: "C",
-      cell: ({ row }) => <span className="text-sm">{row.original.c_value || "-"}</span>,
-    },
-    {
-      accessorKey: "ban",
-      header: "Ban",
-      cell: ({ row }) => <span className="text-sm">{row.original.ban || "-"}</span>,
-    },
-    {
-      accessorKey: "obs",
-      header: "Obs",
-      cell: ({ row }) => <span className="text-sm">{row.original.obs || "-"}</span>,
-    },
-    {
-      accessorKey: "intense_time",
-      header: "Time",
-      cell: ({ row }) => (
-        <span className="text-sm">{row.original.intense_time ? `${row.original.intense_time}s` : "-"}</span>
-      ),
-    },
-    {
-      id: "actions",
-      header: "",
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => deleteResponse(row.original.id)}
-          disabled={saving || test?.status === "completed"}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      ),
-    },
-  ];
+  // Memoized filtered responses for selected card
+  const cardResponses = useMemo(
+    () => responses.filter((r) => r.card_number === selectedCard),
+    [responses, selectedCard]
+  );
 
-  const cardResponses = responses.filter(r => r.card_number === selectedCard);
-  
+  // Memoized card response counts
+  const cardCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (let i = 1; i <= 10; i++) {
+      counts[i] = responses.filter((r) => r.card_number === i).length;
+    }
+    return counts;
+  }, [responses]);
+
+  // Table columns definition with delete action
+  const columns = useMemo<ColumnDef<Response>[]>(
+    () => [
+      {
+        accessorKey: "response_number",
+        header: "Resp #",
+        cell: ({ row }) => <div className="font-medium">{row.original.response_number}</div>,
+      },
+      {
+        accessorKey: "card_number",
+        header: "Card",
+        cell: ({ row }) => <Badge variant="outline">{row.original.card_number}</Badge>,
+      },
+      {
+        accessorKey: "response_text",
+        header: "Response Text",
+        cell: ({ row }) => <div className="max-w-md truncate">{row.original.response_text}</div>,
+      },
+      {
+        accessorKey: "location",
+        header: "Loc",
+        cell: ({ row }) => <Badge variant="secondary">{row.original.location || "-"}</Badge>,
+      },
+      {
+        accessorKey: "determinants",
+        header: "D",
+        cell: ({ row }) => <div className="text-sm">{row.original.determinants}</div>,
+      },
+      {
+        accessorKey: "content_categories",
+        header: "C",
+        cell: ({ row }) => <div className="text-sm">{row.original.content_categories}</div>,
+      },
+      {
+        accessorKey: "ban",
+        header: "Ban",
+        cell: ({ row }) => <div className="text-sm">{row.original.ban ? "Oui" : "Non"}</div>,
+      },
+      {
+        accessorKey: "obs",
+        header: "Obs",
+        cell: ({ row }) => <div className="text-sm truncate max-w-[100px]">{row.original.obs || "-"}</div>,
+      },
+      {
+        accessorKey: "intense_time",
+        header: "TL",
+        cell: ({ row }) => {
+          const seconds = row.original.intense_time;
+          if (!seconds) return <div className="text-sm">-</div>;
+          const mins = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          return <div className="text-sm">{mins}:{secs.toString().padStart(2, "0")}</div>;
+        },
+      },
+      {
+        accessorKey: "response_time",
+        header: "TR",
+        cell: ({ row }) => {
+          const seconds = row.original.response_time;
+          if (!seconds) return <div className="text-sm">-</div>;
+          const mins = Math.floor(seconds / 60);
+          const secs = seconds % 60;
+          return <div className="text-sm">{mins}:{secs.toString().padStart(2, "0")}</div>;
+        },
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDeleteResponse(row.original.id)}
+            disabled={deleting === row.original.id}
+          >
+            {deleting === row.original.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 text-destructive" />
+            )}
+          </Button>
+        ),
+      },
+    ],
+    [deleting]
+  );
+
   const table = useReactTable({
     data: cardResponses,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
 
+  // Load initial data only on mount
   useEffect(() => {
-    loadTestData();
+    if (user && testId) {
+      loadTestData();
+    }
   }, [testId, user]);
 
   const loadTestData = async () => {
     if (!user || !testId) return;
-
+    
     try {
       const [testResult, responsesResult] = await Promise.all([
-        supabase.from("rorschach_tests").select("*, patients(first_name, last_name)").eq("id", testId).single(),
-        supabase.from("test_responses").select("*").eq("test_id", testId).order("card_number").order("response_number"),
+        supabase
+          .from("rorschach_tests")
+          .select("*, patients(first_name, last_name)")
+          .eq("id", testId)
+          .single(),
+        supabase
+          .from("test_responses")
+          .select("*")
+          .eq("test_id", testId)
+          .order("card_number")
+          .order("response_number"),
       ]);
 
       if (testResult.error) throw testResult.error;
@@ -192,128 +233,99 @@ const ScoringPage = () => {
     }
   };
 
-  const saveResponse = async () => {
-    if (!user || !testId) return;
+  const handleSaveResponse = useCallback(async () => {
+    if (!user || !testId || !newResponse.responseText.trim()) return;
 
     setSaving(true);
     try {
-      const validation = responseSchema.parse({
-        responseText: newResponse.responseText,
-        location: newResponse.location || undefined,
-        determinants: newResponse.determinants,
-        contentCategories: newResponse.contentCategories,
-        cValue: newResponse.cValue || undefined,
-        ban: newResponse.ban || undefined,
-        obs: newResponse.obs || undefined,
-        intenseTime: newResponse.intenseTime ? parseInt(newResponse.intenseTime) : undefined,
-      });
+      // Convert time to seconds
+      const intenseTimeInSeconds =
+        (parseInt(newResponse.intenseTime.minutes) || 0) * 60 +
+        (parseInt(newResponse.intenseTime.seconds) || 0);
 
-      const cardResponses = responses.filter(r => r.card_number === selectedCard);
+      const responseTimeInSeconds =
+        (parseInt(newResponse.responseTime.minutes) || 0) * 60 +
+        (parseInt(newResponse.responseTime.seconds) || 0);
+
+      const cardResponses = responses.filter((r) => r.card_number === selectedCard);
       const nextResponseNumber = cardResponses.length + 1;
 
-      const { error } = await supabase.from("test_responses").insert({
+      const newResponseData = {
         test_id: testId,
         card_number: selectedCard,
         response_number: nextResponseNumber,
-        response_text: validation.responseText,
-        location: validation.location || null,
-        determinants: validation.determinants || [],
-        content_categories: validation.contentCategories || [],
-        c_value: validation.cValue || null,
-        ban: validation.ban || null,
-        obs: validation.obs || null,
-        intense_time: validation.intenseTime || null,
-      });
+        response_text: newResponse.responseText.trim(),
+        location: newResponse.location,
+        determinants: newResponse.determinants,
+        content_categories: newResponse.contentCategories,
+        ban: newResponse.ban,
+        obs: newResponse.obs || null,
+        intense_time: intenseTimeInSeconds > 0 ? intenseTimeInSeconds : null,
+        response_time: responseTimeInSeconds > 0 ? responseTimeInSeconds : null,
+      };
+
+      const { data, error } = await supabase
+        .from("test_responses")
+        .insert(newResponseData)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      // Update total responses count
-      await supabase
+      // Optimistically update state instead of reloading
+      setResponses((prev) => [...prev, data]);
+
+      // Update total count in background
+      supabase
         .from("rorschach_tests")
         .update({ total_responses: responses.length + 1 })
-        .eq("id", testId);
+        .eq("id", testId)
+        .then();
 
       toast({
         title: "Response saved",
-        description: `Card ${selectedCard}, Response ${nextResponseNumber} saved`,
+        description: `Card ${selectedCard}, Response ${nextResponseNumber} saved successfully`,
       });
 
-      setNewResponse({ 
-        responseText: "", 
-        location: "", 
-        determinants: [], 
-        contentCategories: [],
-        cValue: "",
-        ban: "",
-        obs: "",
-        intenseTime: "",
-      });
-      loadTestData();
+      // Reset form
+      setNewResponse(INITIAL_FORM_STATE);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: "Validation error",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
-      } else {
-        console.error("Error saving response:", error);
-        toast({
-          title: "Error saving response",
-          variant: "destructive",
-        });
-      }
+      console.error("Error saving response:", error);
+      toast({
+        title: "Error saving response",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
-  };
+  }, [user, testId, newResponse, selectedCard, responses]);
 
-  const markAsCompleted = async () => {
-    if (!testId) return;
-
-    try {
-      const { error } = await supabase
-        .from("rorschach_tests")
-        .update({ status: "completed" })
-        .eq("id", testId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Test completed",
-        description: "Test has been marked as completed",
-      });
-
-      loadTestData();
-    } catch (error) {
-      console.error("Error completing test:", error);
-      toast({
-        title: "Error completing test",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteResponse = async (responseId: string) => {
+  const handleDeleteResponse = useCallback(async (responseId: string) => {
     if (!user || !testId) return;
 
-    setSaving(true);
+    setDeleting(responseId);
     try {
-      const { error } = await supabase.from("test_responses").delete().eq("id", responseId);
+      const { error } = await supabase
+        .from("test_responses")
+        .delete()
+        .eq("id", responseId);
 
       if (error) throw error;
 
-      // Update total responses count
-      await supabase
+      // Optimistically update state
+      setResponses((prev) => prev.filter((r) => r.id !== responseId));
+
+      // Update total count in background
+      supabase
         .from("rorschach_tests")
         .update({ total_responses: responses.length - 1 })
-        .eq("id", testId);
+        .eq("id", testId)
+        .then();
 
       toast({
         title: "Response deleted",
-        description: "Response successfully removed.",
+        description: "Response successfully removed",
       });
-      loadTestData();
     } catch (error) {
       console.error("Error deleting response:", error);
       toast({
@@ -321,320 +333,348 @@ const ScoringPage = () => {
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setDeleting(null);
     }
-  };
+  }, [user, testId, responses]);
+
+  const handleModalSelect = useCallback((value: string) => {
+    if (modalState.type === "location") {
+      setNewResponse((prev) => ({ ...prev, location: value }));
+    } else if (modalState.type === "determinants") {
+      setNewResponse((prev) => ({ ...prev, determinants: value }));
+    } else if (modalState.type === "content") {
+      setNewResponse((prev) => ({ ...prev, contentCategories: value }));
+    }
+  }, [modalState.type]);
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (!test) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Test not found</p>
-          <Button onClick={() => navigate("/dashboard")} className="mt-4">
-            Return to Dashboard
-          </Button>
-        </div>
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test not found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate("/dashboard")} className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Return to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const handleModalSelect = (value: string) => {
-    if (modalState.type === "location") {
-      setNewResponse({ ...newResponse, location: value });
-    } else if (modalState.type === "determinants") {
-      const current = newResponse.determinants;
-      setNewResponse({
-        ...newResponse,
-        determinants: current.includes(value)
-          ? current.filter((v) => v !== value)
-          : [...current, value],
-      });
-    } else if (modalState.type === "content") {
-      const current = newResponse.contentCategories;
-      setNewResponse({
-        ...newResponse,
-        contentCategories: current.includes(value)
-          ? current.filter((v) => v !== value)
-          : [...current, value],
-      });
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-clinical-gray/20 to-background">
-      <header className="border-b bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/test/${test.patient_id}`)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">
-                Rorschach Scoring - {test.patients.last_name}, {test.patients.first_name}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Test Date: {new Date(test.test_date).toLocaleDateString()}
-              </p>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">
+              Rorschach Test - {test.patients.first_name} {test.patients.last_name}
+            </h1>
+            <p className="text-muted-foreground">
+              {new Date(test.test_date).toLocaleDateString()} • {responses.length} total responses
+            </p>
+          </div>
+        </div>
+        <Badge variant={test.status === "completed" ? "default" : "secondary"}>
+          {test.status}
+        </Badge>
+      </div>
+
+      {/* Card Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Cards (I-X)</CardTitle>
+          <CardDescription>Select a card to add responses</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((card) => (
+              <Button
+                key={card}
+                variant={selectedCard === card ? "default" : "outline"}
+                onClick={() => setSelectedCard(card)}
+                className="relative"
+              >
+                Card {card}
+                {cardCounts[card] > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center">
+                    {cardCounts[card]}
+                  </Badge>
+                )}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Response Entry Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Plus className="inline mr-2 h-5 w-5" />
+            Card {selectedCard} - Add New Response
+          </CardTitle>
+          <CardDescription>Enter patient's response and scoring details</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="responseText">Response Text *</Label>
+            <Textarea
+              id="responseText"
+              value={newResponse.responseText}
+              onChange={(e) => setNewResponse({ ...newResponse, responseText: e.target.value })}
+              placeholder="Patient's verbal response to the card..."
+              disabled={saving}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => setModalState({ type: "location", open: true })}
+                disabled={saving}
+              >
+                {newResponse.location || "Select Location"}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Determinants (D)</Label>
+              <Button
+                variant="outline"
+                className="w-full justify-start truncate"
+                onClick={() => setModalState({ type: "determinants", open: true })}
+                disabled={saving}
+              >
+                {newResponse.determinants.length > 0
+                  ? newResponse.determinants
+                  : "Select Determinants"}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Content (C)</Label>
+              <Button
+                variant="outline"
+                className="w-full justify-start truncate"
+                onClick={() => setModalState({ type: "content", open: true })}
+                disabled={saving}
+              >
+                {newResponse.contentCategories.length > 0
+                  ? newResponse.contentCategories
+                  : "Select Content"}
+              </Button>
             </div>
           </div>
-          {test.status !== "completed" && (
-            <Button onClick={markAsCompleted} variant="secondary">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Mark as Completed
-            </Button>
-          )}
-        </div>
-      </header>
 
-      <main className="container mx-auto p-4 space-y-6">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Card Selection */}
-          <Card className="lg:col-span-1 shadow-card">
-            <CardHeader>
-              <CardTitle>Cards (I-X)</CardTitle>
-              <CardDescription>Select a card to score responses</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-2">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((card) => {
-                  const cardResponseCount = responses.filter(r => r.card_number === card).length;
-                  return (
-                    <Button
-                      key={card}
-                      variant={selectedCard === card ? "default" : "outline"}
-                      onClick={() => setSelectedCard(card)}
-                      className="relative"
-                    >
-                      Card {card}
-                      {cardResponseCount > 0 && (
-                        <Badge variant="secondary" className="ml-2">
-                          {cardResponseCount}
-                        </Badge>
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Response Entry */}
-          <Card className="lg:col-span-2 shadow-card">
-            <CardHeader>
-              <CardTitle>Card {selectedCard} - Add Response</CardTitle>
-              <CardDescription>
-                Enter patient's response and scoring details
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="response">Response Text *</Label>
-                <Textarea
-                  id="response"
-                  value={newResponse.responseText}
-                  onChange={(e) => setNewResponse({ ...newResponse, responseText: e.target.value })}
-                  placeholder="Patient's verbal response to the card..."
-                  disabled={saving || test.status === "completed"}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Latency Time (TL)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  value={newResponse.intenseTime.minutes}
+                  onChange={(e) =>
+                    setNewResponse({
+                      ...newResponse,
+                      intenseTime: { ...newResponse.intenseTime, minutes: e.target.value },
+                    })
+                  }
+                  placeholder="Min"
+                  disabled={saving}
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={newResponse.intenseTime.seconds}
+                  onChange={(e) =>
+                    setNewResponse({
+                      ...newResponse,
+                      intenseTime: { ...newResponse.intenseTime, seconds: e.target.value },
+                    })
+                  }
+                  placeholder="Sec"
+                  disabled={saving}
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Location</Label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => setModalState({ type: "location", open: true })}
-                    disabled={saving || test.status === "completed"}
-                  >
-                    {newResponse.location || "Select Location"}
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Determinants (D)</Label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => setModalState({ type: "determinants", open: true })}
-                    disabled={saving || test.status === "completed"}
-                  >
-                    {newResponse.determinants.length > 0
-                      ? newResponse.determinants.join(", ")
-                      : "Select Determinants"}
-                  </Button>
-                </div>
+            <div className="space-y-2">
+              <Label>Response Time (TR)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  value={newResponse.responseTime.minutes}
+                  onChange={(e) =>
+                    setNewResponse({
+                      ...newResponse,
+                      responseTime: { ...newResponse.responseTime, minutes: e.target.value },
+                    })
+                  }
+                  placeholder="Min"
+                  disabled={saving}
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={newResponse.responseTime.seconds}
+                  onChange={(e) =>
+                    setNewResponse({
+                      ...newResponse,
+                      responseTime: { ...newResponse.responseTime, seconds: e.target.value },
+                    })
+                  }
+                  placeholder="Sec"
+                  disabled={saving}
+                />
               </div>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Content (C)</Label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => setModalState({ type: "content", open: true })}
-                    disabled={saving || test.status === "completed"}
-                  >
-                    {newResponse.contentCategories.length > 0
-                      ? newResponse.contentCategories.join(", ")
-                      : "Select Content"}
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cValue">C Value</Label>
-                  <Input
-                    id="cValue"
-                    value={newResponse.cValue}
-                    onChange={(e) => setNewResponse({ ...newResponse, cValue: e.target.value })}
-                    placeholder="Enter C value"
-                    disabled={saving || test.status === "completed"}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ban">Ban</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Non</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={newResponse.ban}
+                  onClick={() => setNewResponse({ ...newResponse, ban: !newResponse.ban })}
+                  disabled={saving}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                    newResponse.ban ? "bg-primary" : "bg-gray-200"
+                  } ${saving ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      newResponse.ban ? "translate-x-6" : "translate-x-1"
+                    }`}
                   />
-                </div>
+                </button>
+                <span className="text-sm">Oui</span>
               </div>
+            </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ban">Ban</Label>
-                  <Input
-                    id="ban"
-                    value={newResponse.ban}
-                    onChange={(e) => setNewResponse({ ...newResponse, ban: e.target.value })}
-                    placeholder="Ban"
-                    disabled={saving || test.status === "completed"}
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="obs">Observations</Label>
+              <Input
+                id="obs"
+                value={newResponse.obs}
+                onChange={(e) => setNewResponse({ ...newResponse, obs: e.target.value })}
+                placeholder="Observations"
+                disabled={saving}
+              />
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="obs">Obs</Label>
-                  <Input
-                    id="obs"
-                    value={newResponse.obs}
-                    onChange={(e) => setNewResponse({ ...newResponse, obs: e.target.value })}
-                    placeholder="Obs"
-                    disabled={saving || test.status === "completed"}
-                  />
-                </div>
+          <Button
+            onClick={handleSaveResponse}
+            disabled={saving || !newResponse.responseText.trim()}
+            className="w-full"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Response
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="intenseTime">Time (seconds)</Label>
-                  <Input
-                    id="intenseTime"
-                    type="number"
-                    value={newResponse.intenseTime}
-                    onChange={(e) => setNewResponse({ ...newResponse, intenseTime: e.target.value })}
-                    placeholder="0"
-                    disabled={saving || test.status === "completed"}
-                  />
-                </div>
-              </div>
-
-              {test.status !== "completed" && (
-                <Button onClick={saveResponse} disabled={saving || !newResponse.responseText} className="w-full">
-                  {saving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Save Response
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Existing Responses Table */}
-        {cardResponses.length > 0 && (
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Card {selectedCard} - Recorded Responses</CardTitle>
-              <CardDescription>{cardResponses.length} response(s) recorded</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <TableHead key={header.id}>
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(
-                                  header.column.columnDef.header,
-                                  header.getContext()
-                                )}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableHeader>
-                  <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                      table.getRowModel().rows.map((row) => (
-                        <TableRow key={row.id}>
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={columns.length}
-                          className="h-24 text-center"
-                        >
-                          No responses recorded for this card yet.
+      {/* Responses Table */}
+      {cardResponses.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Card {selectedCard} - Recorded Responses</CardTitle>
+            <CardDescription>{cardResponses.length} response(s) recorded</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Selection Modals */}
-        <SelectionModal
-          open={modalState.type === "location" && modalState.open}
-          onOpenChange={(open) => setModalState({ ...modalState, open })}
-          title="Select Location"
-          options={LOCATION_OPTIONS}
-          onSelect={handleModalSelect}
-        />
-        <SelectionModal
-          open={modalState.type === "determinants" && modalState.open}
-          onOpenChange={(open) => setModalState({ ...modalState, open })}
-          title="Select Determinants"
-          options={DETERMINANT_OPTIONS}
-          onSelect={handleModalSelect}
-          multiSelect
-          selectedValues={newResponse.determinants}
-        />
-        <SelectionModal
-          open={modalState.type === "content" && modalState.open}
-          onOpenChange={(open) => setModalState({ ...modalState, open })}
-          title="Select Content Categories"
-          options={CONTENT_OPTIONS}
-          onSelect={handleModalSelect}
-          multiSelect
-          selectedValues={newResponse.contentCategories}
-        />
-      </main>
+      {/* Selection Modals */}
+      <SelectionModal
+        open={modalState.type === "location" && modalState.open}
+        onOpenChange={(open) => setModalState({ ...modalState, open })}
+        title="Select Location"
+        options={LOCATION_OPTIONS}
+        onSelect={handleModalSelect}
+      />
+      <SelectionModal
+        open={modalState.type === "determinants" && modalState.open}
+        onOpenChange={(open) => setModalState({ ...modalState, open })}
+        title="Select Determinants"
+        options={DETERMINANT_OPTIONS}
+        onSelect={handleModalSelect}
+        selectedValues={newResponse.determinants}
+      />
+      <SelectionModal
+        open={modalState.type === "content" && modalState.open}
+        onOpenChange={(open) => setModalState({ ...modalState, open })}
+        title="Select Content Categories"
+        options={CONTENT_OPTIONS}
+        onSelect={handleModalSelect}
+        selectedValues={newResponse.contentCategories}
+      />
     </div>
   );
 };

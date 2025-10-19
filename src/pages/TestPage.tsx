@@ -227,8 +227,7 @@ const TestPage = () => {
                 {tests?.map((test) => (
                   <Card
                     key={test.id}
-                    className="cursor-pointer transition-all hover:shadow-soft"
-                    onClick={() => navigate(`/scoring/${test.id}`)}
+                    className="transition-all hover:shadow-soft"
                   >
                     <CardContent className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-4">
@@ -250,6 +249,20 @@ const TestPage = () => {
                         >
                           {test.status.replace("_", " ")}
                         </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/scoring/${test.id}`)}
+                        >
+                          Score Test
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/results/${test.id}`)}
+                        >
+                          View Results
+                        </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button

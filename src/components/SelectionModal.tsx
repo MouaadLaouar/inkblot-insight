@@ -9,7 +9,7 @@ interface SelectionModalProps {
   options: { value: string; label: string; description?: string }[];
   onSelect: (value: string) => void;
   multiSelect?: boolean;
-  selectedValues?: string[];
+  selectedValues?: string;
 }
 
 const SelectionModal = ({
@@ -19,7 +19,7 @@ const SelectionModal = ({
   options,
   onSelect,
   multiSelect = false,
-  selectedValues = [],
+  selectedValues = "",
 }: SelectionModalProps) => {
   const isSelected = (value: string) => selectedValues.includes(value);
 
