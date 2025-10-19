@@ -229,7 +229,7 @@ const TestPage = () => {
                     key={test.id}
                     className="transition-all hover:shadow-soft"
                   >
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4">
                       <div className="flex items-center gap-4">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                           <TestTube2 className="h-5 w-5 text-primary" />
@@ -243,7 +243,7 @@ const TestPage = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
                         <Badge
                           variant={test.status === "completed" ? "default" : "secondary"}
                         >

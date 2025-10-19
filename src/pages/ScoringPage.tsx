@@ -378,7 +378,7 @@ const ScoringPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" onClick={() => history.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

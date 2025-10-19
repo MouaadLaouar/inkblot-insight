@@ -395,7 +395,7 @@ const ResultsPage = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => history.back()}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>

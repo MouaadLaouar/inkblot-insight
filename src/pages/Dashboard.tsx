@@ -124,10 +124,10 @@ const Dashboard = () => {
                   <Plus className="mr-2 h-4 w-4" />
                   Add Patient
                 </Button>
-                <Button variant="outline" onClick={() => navigate("/results")}>
+                {/* <Button variant="outline" onClick={() => navigate("/results")}>
                   <FileText className="mr-2 h-4 w-4" />
                   View Sample Results
-                </Button>
+                </Button> */}
               </div>
             </div>
           </CardHeader>

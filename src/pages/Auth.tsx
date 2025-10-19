@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/hooks/use-toast";
 import { Loader2, TestTube2 } from "lucide-react";
 import { z } from "zod";
+import Logo from "@/components/icons/logo";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -153,11 +154,12 @@ const Auth = () => {
       <Card className="w-full max-w-md shadow-elevated">
         <CardHeader className="space-y-4 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary">
-            <TestTube2 className="h-8 w-8 text-primary-foreground" />
+            {/* <TestTube2 className="h-8 w-8 text-primary-foreground" /> */}
+            <Logo className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold">
-              Rorschach Scoring
+              Cotation Rorschach
             </CardTitle>
             <CardDescription className="mt-2">
               {isLogin ? "Sign in to your account" : "Create your account"}
@@ -172,7 +174,7 @@ const Auth = () => {
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Dr. Jane Smith"
+                  placeholder="Dr."
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required={!isLogin}
