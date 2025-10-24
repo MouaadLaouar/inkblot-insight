@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Download, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatSToMS } from "@/lib/utils";
+import { calculateRorschachStats } from "@/lib/RorschachCalculator";
 
 interface TestResponse {
   id: string;
@@ -45,7 +47,7 @@ interface RorschachStats {
   totalTestTime: number;
   totalLatency: number;
   avgLatency: number;
-  
+
   location: {
     G: { count: number; percentage: number };
     D: { count: number; percentage: number };
@@ -54,48 +56,48 @@ interface RorschachStats {
     Ddbl: { count: number; percentage: number };
     Do: { count: number; percentage: number };
   };
-  
+
   F_total: number;
   F_percentage: number;
   F_plus_percentage: number;
   F_minus_percentage: number;
   F_extended_percentage: number;
-  
+
   determinants: {
     F: number;
     F_plus: number;
     F_minus: number;
     F_extended: number;
-    
+
     C: number;
     CF: number;
     FC: number;
-    
+
     C_prime: number;
     C_primeF: number;
     FC_prime: number;
-    
+
     E: number;
     EF: number;
     FE: number;
-    
+
     K: number;
     Kp: number;
     kan: number;
     kob: number;
-    
+
     Clob: number;
     ClobF: number;
     FClob: number;
   };
-  
+
   sumK: number;
   sumC: number;
   TRI: string;
   F_compl: string;
-  
+
   RC_percentage: number;
-  
+
   content: {
     H: number;
     H_parentheses: number;
@@ -115,226 +117,20 @@ interface RorschachStats {
     Art: number;
     Abs: number;
   };
-  
+
   H_percentage: number;
   A_percentage: number;
   Anat_percentage: number;
   Angoisse_formula: string;
-  
+
   Ban_count: number;
   Ban_percentage: number;
 }
 
-const calculateRorschachStats = (responses: TestResponse[]): RorschachStats => {
-  const R = responses.length;
-  
-  // Time calculations - parse as integers safely
-  const responseTimes = responses
-    .map(r => {
-      if (!r.response_time) return 0;
-      const parsed = parseInt(r.response_time);
-      return isNaN(parsed) ? 0 : parsed;
-    })
-    .filter(t => t > 0);
-  const totalTestTime = responseTimes.reduce((sum, t) => sum + t, 0);
-  
-  const latencies = responses
-    .map(r => {
-      if (!r.intense_time) return 0;
-      const parsed = parseInt(r.intense_time);
-      return isNaN(parsed) ? 0 : parsed;
-    })
-    .filter(t => t > 0);
-  const totalLatency = latencies.reduce((sum, t) => sum + t, 0);
-  const avgLatency = latencies.length > 0 
-    ? parseFloat((totalLatency / latencies.length).toFixed(2)) 
-    : 0;
-  
-  // Location counts
-  const locationCounts = {
-    G: 0, D: 0, Dd: 0, Dbl: 0, Ddbl: 0, Do: 0
-  };
-  
-  responses.forEach(r => {
-    if (r.location && Object.prototype.hasOwnProperty.call(locationCounts, r.location)) {
-      locationCounts[r.location as keyof typeof locationCounts]++;
-    }
-  });
-  
-  const location = {
-    G: { 
-      count: locationCounts.G, 
-      percentage: R > 0 ? parseFloat(((locationCounts.G / R) * 100).toFixed(2)) : 0 
-    },
-    D: { 
-      count: locationCounts.D, 
-      percentage: R > 0 ? parseFloat(((locationCounts.D / R) * 100).toFixed(2)) : 0 
-    },
-    Dd: { 
-      count: locationCounts.Dd, 
-      percentage: R > 0 ? parseFloat(((locationCounts.Dd / R) * 100).toFixed(2)) : 0 
-    },
-    Dbl: { 
-      count: locationCounts.Dbl, 
-      percentage: R > 0 ? parseFloat(((locationCounts.Dbl / R) * 100).toFixed(2)) : 0 
-    },
-    Ddbl: { 
-      count: locationCounts.Ddbl, 
-      percentage: R > 0 ? parseFloat(((locationCounts.Ddbl / R) * 100).toFixed(2)) : 0 
-    },
-    Do: { 
-      count: locationCounts.Do, 
-      percentage: R > 0 ? parseFloat(((locationCounts.Do / R) * 100).toFixed(2)) : 0 
-    },
-  };
-  
-  // Determinants count
-  const determinants = {
-    F: 0, F_plus: 0, F_minus: 0, F_extended: 0,
-    C: 0, CF: 0, FC: 0,
-    C_prime: 0, C_primeF: 0, FC_prime: 0,
-    E: 0, EF: 0, FE: 0,
-    K: 0, Kp: 0, kan: 0, kob: 0,
-    Clob: 0, ClobF: 0, FClob: 0,
-  };
-  
-  responses.forEach(r => {
-    const det = r.determinants?.trim();
-    if (!det) return;
-    
-    if (det === 'F') determinants.F++;
-    else if (det === 'F+') determinants.F_plus++;
-    else if (det === 'F-') determinants.F_minus++;
-    else if (det === 'F+-') determinants.F_extended++;
-    else if (det === 'C') determinants.C++;
-    else if (det === 'CF') determinants.CF++;
-    else if (det === 'FC') determinants.FC++;
-    else if (det === "C'") determinants.C_prime++;
-    else if (det === "C'F") determinants.C_primeF++;
-    else if (det === "FC'") determinants.FC_prime++;
-    else if (det === 'E') determinants.E++;
-    else if (det === 'EF') determinants.EF++;
-    else if (det === 'FE') determinants.FE++;
-    else if (det === 'K') determinants.K++;
-    else if (det === 'Kp') determinants.Kp++;
-    else if (det === 'kan') determinants.kan++;
-    else if (det === 'kob') determinants.kob++;
-    else if (det === 'Clob') determinants.Clob++;
-    else if (det === 'ClobF') determinants.ClobF++;
-    else if (det === 'FClob') determinants.FClob++;
-  });
-  
-  // F% calculations - FIXED: Calculate based on total F responses
-  const F_total = determinants.F + determinants.F_plus + determinants.F_minus + determinants.F_extended;
-  const F_percentage = R > 0 ? parseFloat(((F_total / R) * 100).toFixed(2)) : 0;
-  
-  // F+%, F-%, F+-% are percentages OF the F responses, not of R
-  const F_plus_percentage = F_total > 0 ? parseFloat(((determinants.F_plus / F_total) * 100).toFixed(2)) : 0;
-  const F_minus_percentage = F_total > 0 ? parseFloat(((determinants.F_minus / F_total) * 100).toFixed(2)) : 0;
-  const F_extended_percentage = F_total > 0 ? parseFloat(((determinants.F_extended / F_total) * 100).toFixed(2)) : 0;
-  
-  // TRI calculation - FIXED: Use proper weighting
-  const sumK = determinants.K + determinants.Kp;
-  const sumC = parseFloat((
-    (determinants.C * 1.5) + 
-    (determinants.CF * 1) + 
-    (determinants.FC * 0.5) +
-    (determinants.C_prime * 1.5) +
-    (determinants.C_primeF * 1) +
-    (determinants.FC_prime * 0.5)
-  ).toFixed(1));
-  
-  const TRI = `${sumK}K/${sumC}C`;
-  
-  // F.compl calculation
-  const totalK_compl = determinants.K + determinants.Kp;
-  const totalE_compl = determinants.E + determinants.EF + determinants.FE;
-  const F_compl = `=${totalK_compl}K/${totalE_compl}E`;
-  
-  // RC% - FIXED: (D + Dd) / R
-  const RC_percentage = R > 0 
-    ? parseFloat((((locationCounts.D + locationCounts.Dd) / R) * 100).toFixed(2)) 
-    : 0;
-  
-  // Content analysis
-  const content = {
-    H: 0, H_parentheses: 0, Hd: 0, Hd_parentheses: 0,
-    A: 0, A_parentheses: 0, Ad: 0, Ad_parentheses: 0,
-    Anat: 0, Sex: 0, Bot: 0, Géo: 0, Nat: 0,
-    Obj: 0, Arch: 0, Art: 0, Abs: 0,
-  };
-  
-  responses.forEach(r => {
-    const cont = r.content_categories?.trim();
-    if (!cont) return;
-    
-    if (cont === 'H') content.H++;
-    else if (cont === '(H)') content.H_parentheses++;
-    else if (cont === 'Hd') content.Hd++;
-    else if (cont === '(Hd)') content.Hd_parentheses++;
-    else if (cont === 'A') content.A++;
-    else if (cont === '(A)') content.A_parentheses++;
-    else if (cont === 'Ad') content.Ad++;
-    else if (cont === '(Ad)') content.Ad_parentheses++;
-    else if (cont === 'Anat') content.Anat++;
-    else if (cont === 'Sex') content.Sex++;
-    else if (cont === 'Bot') content.Bot++;
-    else if (cont === 'Géo') content.Géo++;
-    else if (cont === 'Nat') content.Nat++;
-    else if (cont === 'Obj') content.Obj++;
-    else if (cont === 'Arch') content.Arch++;
-    else if (cont === 'Art') content.Art++;
-    else if (cont === 'Abs') content.Abs++;
-  });
-  
-  // H% = (H + (H) + Hd + (Hd)) / R * 100
-  const totalH = content.H + content.H_parentheses + content.Hd + content.Hd_parentheses;
-  const H_percentage = R > 0 ? parseFloat(((totalH / R) * 100).toFixed(2)) : 0;
-  
-  // A% = (A + (A) + Ad + (Ad)) / R * 100
-  const totalA = content.A + content.A_parentheses + content.Ad + content.Ad_parentheses;
-  const A_percentage = R > 0 ? parseFloat(((totalA / R) * 100).toFixed(2)) : 0;
-  
-  // Angoisse = (Anat + Sex) / R * 100
-  const anatSexTotal = content.Anat + content.Sex;
-  const Anat_percentage = R > 0 ? parseFloat(((anatSexTotal / R) * 100).toFixed(2)) : 0;
-  const Angoisse_formula = `${anatSexTotal}.100/${R}=${Anat_percentage}%`;
-  
-  // Ban
-  const Ban_count = responses.filter(r => r.ban === true).length;
-  const Ban_percentage = R > 0 ? parseFloat(((Ban_count / R) * 100).toFixed(2)) : 0;
-  
-  return {
-    R,
-    totalTestTime,
-    totalLatency,
-    avgLatency,
-    location,
-    F_total,
-    F_percentage,
-    F_plus_percentage,
-    F_minus_percentage,
-    F_extended_percentage,
-    determinants,
-    sumK,
-    sumC,
-    TRI,
-    F_compl,
-    RC_percentage,
-    content,
-    H_percentage,
-    A_percentage,
-    Anat_percentage,
-    Angoisse_formula,
-    Ban_count,
-    Ban_percentage,
-  };
-};
-
 const ResultsPage = () => {
   const { testId } = useParams();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [test, setTest] = useState<TestData | null>(null);
   const [responses, setResponses] = useState<TestResponse[]>([]);
@@ -343,7 +139,7 @@ const ResultsPage = () => {
   useEffect(() => {
     const loadData = async () => {
       if (!testId) return;
-      
+
       try {
         const [testResult, responsesResult] = await Promise.all([
           supabase
@@ -364,11 +160,13 @@ const ResultsPage = () => {
 
         setTest(testResult.data);
         setResponses(responsesResult.data || []);
-        
-        const calculatedStats = calculateRorschachStats(responsesResult.data || []);
+
+        const calculatedStats = calculateRorschachStats(
+          responsesResult.data || []
+        );
         setStats(calculatedStats);
-        
-        console.log("Calculated Stats:", calculatedStats); // Debug log
+
+        // console.log("Calculated Stats:", calculatedStats); // Debug log
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -392,16 +190,13 @@ const ResultsPage = () => {
       <header className="border-b bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-4 whitespace-normal">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => history.back()}
-            >
+            <Button variant="ghost" size="icon" onClick={() => history.back()}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
               <h1 className="text-xl font-bold">
-                Rorschach Test Results - {test.patients.last_name}, {test.patients.first_name}
+                Rorschach Test Results - {test.patients.last_name},{" "}
+                {test.patients.first_name}
               </h1>
               <p className="text-sm text-muted-foreground">
                 Test Date: {new Date(test.test_date).toLocaleDateString()}
@@ -426,91 +221,133 @@ const ResultsPage = () => {
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>المخطط النفسي (Psychogram)</CardTitle>
-            <CardDescription>Complete Rorschach scoring summary</CardDescription>
+            <CardDescription>
+              Complete Rorschach scoring summary
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg bg-muted/30">
               {/* Left Column */}
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-start">
                   <span className="font-semibold">R=</span>
-                  <span>{stats.R}</span>
+                  <span className="font-semibold">{stats.R}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-start gap-2">
                   <span className="font-semibold">T.t=</span>
-                  <span>{stats.totalTestTime}"</span>
+                  <span className="font-semibold">{formatSToMS(stats.totalLatency)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-start gap-2">
                   <span className="font-semibold">T/R=</span>
-                  <span>{stats.totalLatency}"</span>
+                  <span className="font-semibold">{formatSToMS(stats.totalTestTime)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-start gap-2">
                   <span className="font-semibold">T.lat.moy.=</span>
-                  <span>{stats.avgLatency}"</span>
+                  <span className="font-semibold">{formatSToMS(stats.avgLatency)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-start gap-2">
                   <span className="font-semibold">T.R.I.=</span>
-                  <span>{stats.TRI}</span>
+                  <span className="font-semibold">{stats.TRI}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-start gap-2">
                   <span className="font-semibold">F.compl.</span>
-                  <span>{stats.F_compl}</span>
+                  <span className="font-semibold">{stats.F_compl}</span>
                 </div>
               </div>
 
               {/* Middle Column */}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-semibold">G=</span>
-                  <span>{stats.location.G.count} ,G%={stats.location.G.percentage}</span>
+                  <span className="font-semibold">
+                    G= {stats.location.G.count}
+                  </span>
+                  <span className="font-semibold">
+                    ,G%={stats.location.G.percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">D=</span>
-                  <span>{stats.location.D.count} ,D%={stats.location.D.percentage}</span>
+                  <span className="font-semibold">
+                    D= {stats.location.D.count}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,D%={stats.location.D.percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Dd=</span>
-                  <span>{stats.location.Dd.count} ,Dd%={stats.location.Dd.percentage}</span>
+                  <span className="font-semibold">
+                    Dd= {stats.location.Dd.count}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,Dd%={stats.location.Dd.percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Dbl=</span>
-                  <span>{stats.location.Dbl.count} ,Dbl%={stats.location.Dbl.percentage}</span>
+                  <span className="font-semibold">
+                    Dbl= {stats.location.Dbl.count}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,Dbl%={stats.location.Dbl.percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Ddbl=</span>
-                  <span>{stats.location.Ddbl.count} ,Ddbl%={stats.location.Ddbl.percentage}</span>
+                  <span className="font-semibold">
+                    Ddbl= {stats.location.Ddbl.count}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,Ddbl%={stats.location.Ddbl.percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Do=</span>
-                  <span>{stats.location.Do.count} ,Do%={stats.location.Do.percentage}</span>
+                  <span className="font-semibold">
+                    Do= {stats.location.Do.count}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,Do%={stats.location.Do.percentage}
+                  </span>
                 </div>
               </div>
 
               {/* Right Column */}
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-semibold">F=</span>
-                  <span>{stats.F_total} ,F%={stats.F_percentage}</span>
+                  <span className="font-semibold">F= {stats.F_total} </span>
+                  <span className="font-semibold">
+                    ,F%={stats.F_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">F+=</span>
-                  <span>{stats.determinants.F_plus} ,F+%={stats.F_plus_percentage}</span>
+                  <span className="font-semibold">
+                    F+= {stats.determinants.F_plus}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,F+%={stats.F_plus_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">F+elarg.%=</span>
-                  <span>{stats.F_extended_percentage}</span>
+                  <span className="font-semibold">
+                    F+elarg.%= {stats.F_extended_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">F-=</span>
-                  <span>{stats.determinants.F_minus} ,F-%={stats.F_minus_percentage}</span>
+                  <span className="font-semibold">
+                    F-= {stats.determinants.F_minus}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,F-%={stats.F_minus_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">F+-=</span>
-                  <span>{stats.determinants.F_extended} ,F+-%={stats.F_extended_percentage}</span>
+                  <span className="font-semibold">
+                    F+-= {stats.determinants.F_extended}{" "}
+                  </span>
+                  <span className="font-semibold">
+                    ,F+-%={stats.F_extended_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">FC=</span>
-                  <span>{stats.determinants.FC}</span>
+                  <span className="font-semibold">
+                    FC= {stats.determinants.FC}
+                  </span>
                 </div>
               </div>
             </div>
@@ -519,55 +356,70 @@ const ResultsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 p-4 border rounded-lg bg-muted/30">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-semibold">RC%=</span>
-                  <span>{stats.RC_percentage}%</span>
+                  <span className="font-semibold">
+                    RC%= {stats.RC_percentage}%
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Ban=</span>
-                  <span>{stats.Ban_count} ,Ban%={stats.Ban_percentage}</span>
+                  <span className="font-semibold">Ban= {stats.Ban_count} </span>
+                  <span className="font-semibold">
+                    ,Ban%={stats.Ban_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Angoisse=</span>
-                  <span>{stats.Angoisse_formula}</span>
+                  <span className="font-semibold">
+                    Angoisse= {stats.Angoisse_formula}
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="font-semibold">CF=</span>
-                  <span>{stats.determinants.CF}</span>
+                  <span className="font-semibold">
+                    CF= {stats.determinants.CF}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">C=</span>
-                  <span>{stats.determinants.C}</span>
+                  <span className="font-semibold">
+                    C= {stats.determinants.C}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">C'=</span>
-                  <span>{stats.determinants.C_prime}</span>
+                  <span className="font-semibold">
+                    C'= {stats.determinants.C_prime}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Kan=</span>
-                  <span>{stats.determinants.kan}</span>
+                  <span className="font-semibold">
+                    Kan= {stats.determinants.kan}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">A=</span>
-                  <span>{stats.content.A} ,A%={stats.A_percentage}</span>
+                  <span className="font-semibold">A= {stats.content.A} </span>
+                  <span className="font-semibold">
+                    ,A%={stats.A_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">H=</span>
-                  <span>{stats.content.H} ,H%={stats.H_percentage}</span>
+                  <span className="font-semibold">H= {stats.content.H} </span>
+                  <span className="font-semibold">
+                    ,H%={stats.H_percentage}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Anat=</span>
-                  <span>{stats.content.Anat}</span>
+                  <span className="font-semibold">
+                    Anat= {stats.content.Anat}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Bot=</span>
-                  <span>{stats.content.Bot}</span>
+                  <span className="font-semibold">
+                    Bot= {stats.content.Bot}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-semibold">Géo=</span>
-                  <span>{stats.content.Géo}</span>
+                  <span className="font-semibold">
+                    Géo= {stats.content.Géo}
+                  </span>
                 </div>
               </div>
             </div>
@@ -605,11 +457,11 @@ const ResultsPage = () => {
         </Card>
 
         <Tabs defaultValue="structural" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full h-full grid-cols-2">
             <TabsTrigger value="structural">Structural Summary</TabsTrigger>
-            <TabsTrigger value="location">Location Analysis</TabsTrigger>
+            <TabsTrigger value="location">Location</TabsTrigger>
             <TabsTrigger value="determinants">Determinants</TabsTrigger>
-            <TabsTrigger value="content">Content Analysis</TabsTrigger>
+            <TabsTrigger value="content">Content</TabsTrigger>
           </TabsList>
 
           <TabsContent value="structural" className="space-y-4">
