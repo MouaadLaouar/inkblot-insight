@@ -14,7 +14,7 @@ export const DETERMINANT_OPTIONS = [
   { value: "F+", label: "F+ - Forme bonne", description: "Good form quality" },
   { value: "F-", label: "F- - Forme mauvaise", description: "Poor form quality" },
   { value: "F+-", label: "F+- - Forme élargie", description: "Extended/approximate form" },
-  { value: "F", label: "F - Forme", description: "Pure form (neutral quality)" },
+  // { value: "F", label: "F - Forme", description: "Pure form (neutral quality)" },
   
   // Chromatic color determinants
   { value: "C", label: "C - Couleur pure", description: "Pure color (no form)" },
