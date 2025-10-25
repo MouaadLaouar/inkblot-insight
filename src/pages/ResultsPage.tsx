@@ -14,7 +14,10 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Download, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatSToMS } from "@/lib/utils";
-import { calculateRorschachStats } from "@/lib/RorschachCalculator";
+import {
+  calculateRorschachStats,
+  RorschachStats,
+} from "@/lib/RorschachCalculator";
 
 interface TestResponse {
   id: string;
@@ -40,91 +43,6 @@ interface TestData {
     first_name: string;
     last_name: string;
   };
-}
-
-interface RorschachStats {
-  R: number;
-  totalTestTime: number;
-  totalLatency: number;
-  avgLatency: number;
-
-  location: {
-    G: { count: number; percentage: number };
-    D: { count: number; percentage: number };
-    Dd: { count: number; percentage: number };
-    Dbl: { count: number; percentage: number };
-    Ddbl: { count: number; percentage: number };
-    Do: { count: number; percentage: number };
-  };
-
-  F_total: number;
-  F_percentage: number;
-  F_plus_percentage: number;
-  F_minus_percentage: number;
-  F_extended_percentage: number;
-
-  determinants: {
-    F: number;
-    F_plus: number;
-    F_minus: number;
-    F_extended: number;
-
-    C: number;
-    CF: number;
-    FC: number;
-
-    C_prime: number;
-    C_primeF: number;
-    FC_prime: number;
-
-    E: number;
-    EF: number;
-    FE: number;
-
-    K: number;
-    Kp: number;
-    kan: number;
-    kob: number;
-
-    Clob: number;
-    ClobF: number;
-    FClob: number;
-  };
-
-  sumK: number;
-  sumC: number;
-  TRI: string;
-  F_compl: string;
-
-  RC_percentage: number;
-
-  content: {
-    H: number;
-    H_parentheses: number;
-    Hd: number;
-    Hd_parentheses: number;
-    A: number;
-    A_parentheses: number;
-    Ad: number;
-    Ad_parentheses: number;
-    Anat: number;
-    Sex: number;
-    Bot: number;
-    Géo: number;
-    Nat: number;
-    Obj: number;
-    Arch: number;
-    Art: number;
-    Abs: number;
-  };
-
-  H_percentage: number;
-  A_percentage: number;
-  Anat_percentage: number;
-  Angoisse_formula: string;
-
-  Ban_count: number;
-  Ban_percentage: number;
 }
 
 const ResultsPage = () => {
@@ -235,15 +153,21 @@ const ResultsPage = () => {
                 </div>
                 <div className="flex justify-start gap-2">
                   <span className="font-semibold">T.t=</span>
-                  <span className="font-semibold">{formatSToMS(stats.totalLatency)}</span>
+                  <span className="font-semibold">
+                    {formatSToMS(stats.totalLatency)}
+                  </span>
                 </div>
                 <div className="flex justify-start gap-2">
                   <span className="font-semibold">T/R=</span>
-                  <span className="font-semibold">{formatSToMS(stats.totalTestTime)}</span>
+                  <span className="font-semibold">
+                    {formatSToMS(stats.totalTestTime)}
+                  </span>
                 </div>
                 <div className="flex justify-start gap-2">
                   <span className="font-semibold">T.lat.moy.=</span>
-                  <span className="font-semibold">{formatSToMS(stats.avgLatency)}</span>
+                  <span className="font-semibold">
+                    {formatSToMS(stats.avgLatency)}
+                  </span>
                 </div>
                 <div className="flex justify-start gap-2">
                   <span className="font-semibold">T.R.I.=</span>
@@ -324,8 +248,17 @@ const ResultsPage = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="font-semibold">F pur.%= {stats.F_pur}</span>
+                  <span className="font-semibold">
+                    F+ pur.%= {stats.F_plus_pur}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span className="font-semibold">
                     F+elarg.%= {stats.F_extended_percentage}
+                  </span>
+                  <span className="font-semibold">
+                    F elargi.%= {stats.F_elargi}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -362,9 +295,9 @@ const ResultsPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">Ban= {stats.Ban_count} </span>
-                  <span className="font-semibold">
+                  {/* <span className="font-semibold">
                     ,Ban%={stats.Ban_percentage}
-                  </span>
+                  </span> */}
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
@@ -391,7 +324,18 @@ const ResultsPage = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
+                    K= {stats.determinants.K}
+                  </span>
+                  <span className="font-semibold">
                     Kan= {stats.determinants.kan}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">
+                    KF= {stats.determinants.KF}
+                  </span>
+                  <span className="font-semibold">
+                    FK= {stats.determinants.FK}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -438,19 +382,31 @@ const ResultsPage = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary">{stats.R}</div>
-                <div className="text-sm text-muted-foreground">Total Responses (R)</div>
+                <div className="text-sm text-muted-foreground">
+                  Total Responses (R)
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{stats.F_percentage}%</div>
-                <div className="text-sm text-muted-foreground">Form Percentage (F%)</div>
+                <div className="text-3xl font-bold text-primary">
+                  {stats.F_percentage}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Form Percentage (F%)
+                </div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{stats.TRI}</div>
+                <div className="text-3xl font-bold text-primary">
+                  {stats.TRI}
+                </div>
                 <div className="text-sm text-muted-foreground">TRI</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-primary">{stats.Ban_count}</div>
-                <div className="text-sm text-muted-foreground">Popular (Ban)</div>
+                <div className="text-3xl font-bold text-primary">
+                  {stats.Ban_count}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Popular (Ban)
+                </div>
               </div>
             </div>
           </CardContent>
@@ -474,21 +430,32 @@ const ResultsPage = () => {
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm">Good Form (F+)</span>
-                      <Badge variant="outline">{stats.determinants.F_plus} ({stats.F_plus_percentage}%)</Badge>
+                      <Badge variant="outline">
+                        {stats.determinants.F_plus} ({stats.F_plus_percentage}%)
+                      </Badge>
                     </div>
                     <Progress value={stats.F_plus_percentage} />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm">Poor Form (F-)</span>
-                      <Badge variant="destructive">{stats.determinants.F_minus} ({stats.F_minus_percentage}%)</Badge>
+                      <Badge variant="destructive">
+                        {stats.determinants.F_minus} ({stats.F_minus_percentage}
+                        %)
+                      </Badge>
                     </div>
-                    <Progress value={stats.F_minus_percentage} className="bg-destructive/20" />
+                    <Progress
+                      value={stats.F_minus_percentage}
+                      className="bg-destructive/20"
+                    />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm">Extended Form (F+-)</span>
-                      <Badge variant="outline">{stats.determinants.F_extended} ({stats.F_extended_percentage}%)</Badge>
+                      <Badge variant="outline">
+                        {stats.determinants.F_extended} (
+                        {stats.F_extended_percentage}%)
+                      </Badge>
                     </div>
                     <Progress value={stats.F_extended_percentage} />
                   </div>
@@ -524,7 +491,9 @@ const ResultsPage = () => {
                   </div>
                   <div className="flex justify-between items-center p-2 bg-muted rounded">
                     <span className="text-sm font-medium">Ban</span>
-                    <Badge>{stats.Ban_count} ({stats.Ban_percentage}%)</Badge>
+                    <Badge>
+                      {stats.Ban_count} ({stats.Ban_percentage}%)
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center p-2 bg-muted rounded">
                     <span className="text-sm font-medium">Avg Latency</span>
@@ -532,7 +501,11 @@ const ResultsPage = () => {
                   </div>
                   <div className="flex justify-between items-center p-2 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
                     <span className="text-sm font-medium">Angoisse</span>
-                    <Badge variant={stats.Anat_percentage > 20 ? "destructive" : "secondary"}>
+                    <Badge
+                      variant={
+                        stats.Anat_percentage > 20 ? "destructive" : "secondary"
+                      }
+                    >
                       {stats.Angoisse_formula}
                     </Badge>
                   </div>
@@ -545,7 +518,9 @@ const ResultsPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Location Features</CardTitle>
-                <CardDescription>Distribution of response locations</CardDescription>
+                <CardDescription>
+                  Distribution of response locations
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {Object.entries(stats.location).map(([key, value]) => (
@@ -586,12 +561,20 @@ const ResultsPage = () => {
                     <span className="text-sm">Object Movement (kob)</span>
                     <Badge variant="secondary">{stats.determinants.kob}</Badge>
                   </div>
-                  <div className="mt-4 p-2 bg-muted rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Movement dominates form (KF)</span>
+                    <Badge variant="secondary">{stats.determinants.KF}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Form dominates movement (FK)</span>
+                    <Badge variant="secondary">{stats.determinants.FK}</Badge>
+                  </div>
+                  {/* <div className="mt-4 p-2 bg-muted rounded">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">ΣK (K + Kp)</span>
                       <Badge>{stats.sumK}</Badge>
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
 
@@ -600,7 +583,9 @@ const ResultsPage = () => {
                   <CardTitle>Color Responses</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">Chromatic</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2">
+                    Chromatic
+                  </h4>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Pure Color (C)</span>
                     <Badge variant="secondary">{stats.determinants.C}</Badge>
@@ -613,27 +598,35 @@ const ResultsPage = () => {
                     <span className="text-sm">Form-Color (FC)</span>
                     <Badge variant="secondary">{stats.determinants.FC}</Badge>
                   </div>
-                  
-                  <h4 className="text-xs font-semibold text-muted-foreground mt-4 mb-2">Achromatic</h4>
+
+                  <h4 className="text-xs font-semibold text-muted-foreground mt-4 mb-2">
+                    Achromatic
+                  </h4>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">C'</span>
-                    <Badge variant="secondary">{stats.determinants.C_prime}</Badge>
+                    <span className="text-sm">Pure achromatic (C')</span>
+                    <Badge variant="secondary">
+                      {stats.determinants.C_prime}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">C'F</span>
-                    <Badge variant="secondary">{stats.determinants.C_primeF}</Badge>
+                    <span className="text-sm">Achromatic color dominates form (C'F)</span>
+                    <Badge variant="secondary">
+                      {stats.determinants.C_primeF}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">FC'</span>
-                    <Badge variant="secondary">{stats.determinants.FC_prime}</Badge>
+                    <span className="text-sm">Form dominates achromatic color (FC')</span>
+                    <Badge variant="secondary">
+                      {stats.determinants.FC_prime}
+                    </Badge>
                   </div>
 
-                  <div className="mt-4 p-2 bg-muted rounded">
+                  {/* <div className="mt-4 p-2 bg-muted rounded">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">ΣC (weighted)</span>
                       <Badge>{stats.sumC}</Badge>
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
 
@@ -668,11 +661,15 @@ const ResultsPage = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">ClobF</span>
-                    <Badge variant="secondary">{stats.determinants.ClobF}</Badge>
+                    <Badge variant="secondary">
+                      {stats.determinants.ClobF}
+                    </Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">FClob</span>
-                    <Badge variant="secondary">{stats.determinants.FClob}</Badge>
+                    <Badge variant="secondary">
+                      {stats.determinants.FClob}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -789,34 +786,6 @@ const ResultsPage = () => {
                       <span>Abs:</span>
                       <Badge variant="outline">{stats.content.Abs}</Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Anxiety Index</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Anatomy + Sexual Content</span>
-                      <Badge variant={stats.Anat_percentage > 20 ? "destructive" : "secondary"}>
-                        {stats.Anat_percentage}%
-                      </Badge>
-                    </div>
-                    <Progress 
-                      value={Math.min(stats.Anat_percentage, 100)} 
-                      className={stats.Anat_percentage > 20 ? "bg-destructive/20" : ""}
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Formula: {stats.Angoisse_formula}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.Anat_percentage > 20 
-                        ? "Elevated anatomy content may suggest body concerns or anxiety"
-                        : "Normal range for anatomy content"}
-                    </p>
                   </div>
                 </CardContent>
               </Card>
