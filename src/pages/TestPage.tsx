@@ -43,8 +43,8 @@ const TestPage = () => {
   const [creating, setCreating] = useState(false);
   const [testToDelete, setTestToDelete] = useState<Test | null>(null);
 
-  console.log("TestPage: patientId", patientId);
-  console.log("TestPage: user", user);
+  // console.log("TestPage: patientId", patientId);
+  // console.log("TestPage: user", user);
 
   const { data: tests, isLoading, refetch } = useQuery<Test[]>({
     queryKey: ["tests", patientId],
@@ -59,20 +59,20 @@ const TestPage = () => {
         console.error("Error fetching tests:", error);
         throw new Error(error.message);
       }
-      console.log("TestPage: fetched tests", data);
+      // console.log("TestPage: fetched tests", data);
       return data;
     },
     enabled: !!patientId,
   });
 
   useEffect(() => {
-    console.log("TestPage: useEffect triggered");
+    // console.log("TestPage: useEffect triggered");
     loadPatientData();
   }, [patientId, user]);
 
   const loadPatientData = async () => {
     if (!user || !patientId) {
-      console.log("TestPage: loadPatientData skipped, user or patientId missing");
+      // console.log("TestPage: loadPatientData skipped, user or patientId missing");
       return;
     }
 
@@ -86,7 +86,7 @@ const TestPage = () => {
       if (error) throw error;
 
       setPatient(data);
-      console.log("TestPage: fetched patient", data);
+      // console.log("TestPage: fetched patient", data);
     } catch (error) {
       console.error("Error loading patient data:", error);
       toast({
@@ -156,9 +156,9 @@ const TestPage = () => {
     setTestToDelete(null);
   };
 
-  console.log("TestPage: isLoading", isLoading);
-  console.log("TestPage: patient", patient);
-  console.log("TestPage: tests", tests);
+  // console.log("TestPage: isLoading", isLoading);
+  // console.log("TestPage: patient", patient);
+  // console.log("TestPage: tests", tests);
 
   if (isLoading) {
     return (
