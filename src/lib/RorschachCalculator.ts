@@ -13,7 +13,7 @@ interface TestResponse {
   response_time: string | null;
 }
 
-interface RorschachStats {
+export interface RorschachStats {
   R: number;
   totalTestTime: number;
   totalLatency: number;
@@ -33,6 +33,9 @@ interface RorschachStats {
   F_plus_percentage: number;
   F_minus_percentage: number;
   F_extended_percentage: number;
+  F_pur: number;
+  F_elargi: number;
+  F_plus_pur: number;
 
   determinants: {
     F: number;
@@ -55,6 +58,8 @@ interface RorschachStats {
     K: number;
     Kp: number;
     kan: number;
+    KF: number;
+    FK: number;
     kob: number;
 
     Clob: number;
@@ -168,6 +173,7 @@ export const calculateRorschachStats = (responses: TestResponse[]): RorschachSta
     C_prime: 0, C_primeF: 0, FC_prime: 0,
     E: 0, EF: 0, FE: 0,
     K: 0, Kp: 0, kan: 0, kob: 0,
+    KF: 0, FK: 0,
     Clob: 0, ClobF: 0, FClob: 0,
   };
 
@@ -195,6 +201,8 @@ export const calculateRorschachStats = (responses: TestResponse[]): RorschachSta
     else if (det === 'Clob') determinants.Clob++;
     else if (det === 'ClobF') determinants.ClobF++;
     else if (det === 'FClob') determinants.FClob++;
+    else if (det === 'KF') determinants.KF++;
+    else if (det === 'FK') determinants.FK++;
   });
 
   // F% calculations - FIXED: Calculate based on total F responses
@@ -205,6 +213,14 @@ export const calculateRorschachStats = (responses: TestResponse[]): RorschachSta
   const F_plus_percentage = F_total > 0 ? parseFloat(((determinants.F_plus / F_total) * 100).toFixed(2)) : 0;
   const F_minus_percentage = F_total > 0 ? parseFloat(((determinants.F_minus / F_total) * 100).toFixed(2)) : 0;
   const F_extended_percentage = F_total > 0 ? parseFloat(((determinants.F_extended / F_total) * 100).toFixed(2)) : 0;
+
+  //   F_pur: number;
+  //   F_elargi: number;
+  //   F_plus_elargi: number;
+
+  const F_pur = parseFloat(((F_total * 100) / R).toFixed(2));
+  const F_elargi = parseFloat((((F_total + determinants.K + determinants.kan + determinants.FC + determinants.FE + determinants.FClob) * 100) / R).toFixed(2));
+  const F_plus_pur = parseFloat((((determinants.F_plus + (determinants.F_extended / 2)) * 100) / F_total).toFixed(2));
 
   // TRI calculation - FIXED: Use proper weighting
   const sumK = determinants.K + determinants.Kp;
@@ -293,6 +309,9 @@ export const calculateRorschachStats = (responses: TestResponse[]): RorschachSta
     F_plus_percentage,
     F_minus_percentage,
     F_extended_percentage,
+    F_pur,
+    F_elargi,
+    F_plus_pur,
     determinants,
     sumK,
     sumC,
