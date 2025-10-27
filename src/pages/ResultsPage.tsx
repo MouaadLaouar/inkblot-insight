@@ -281,7 +281,20 @@ const ResultsPage = () => {
                   <span className="font-semibold">
                     FC= {stats.determinants.FC}
                   </span>
+                  <span className="font-semibold">
+                    CF= {stats.determinants.CF}
+                  </span>
                 </div>
+                
+                <div className="flex justify-between">
+                  <span className="font-semibold">
+                    C= {stats.determinants.C}
+                  </span>
+                  <span className="font-semibold">
+                    C'= {stats.determinants.C_prime}
+                  </span>
+                </div>
+                
               </div>
             </div>
 
@@ -307,21 +320,6 @@ const ResultsPage = () => {
               </div>
 
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="font-semibold">
-                    CF= {stats.determinants.CF}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold">
-                    C= {stats.determinants.C}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold">
-                    C'= {stats.determinants.C_prime}
-                  </span>
-                </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
                     K= {stats.determinants.K}
