@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,19 @@ import {
   calculateRorschachStats,
   RorschachStats,
 } from "@/lib/RorschachCalculator";
+import { ColumnDef, getCoreRowModel } from "@tanstack/table-core";
+import { flexRender, useReactTable } from "@tanstack/react-table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import PercentageWithLines from "@/components/PercentageWithLines";
+import TRI_Note from "@/components/TRINote";
+import TRINote from "@/components/TRINote";
 
 interface TestResponse {
   id: string;
@@ -54,6 +67,39 @@ const ResultsPage = () => {
   const [responses, setResponses] = useState<TestResponse[]>([]);
   const [stats, setStats] = useState<RorschachStats | null>(null);
 
+  const columns = useMemo<ColumnDef<TestResponse>[]>(
+    () => [
+      {
+        accessorKey: "response_N",
+        header: "N #",
+        cell: ({ row }) => <div className="font-medium">{row.index + 1}</div>,
+      },
+      {
+        accessorKey: "card_number",
+        header: "Card Number",
+        cell: ({ row }) => (
+          <div className="font-medium">{row.original.card_number}</div>
+        ),
+      },
+      {
+        accessorKey: "response_text",
+        header: "Response Text (Observation)",
+        cell: ({ row }) => (
+          <div className="font-medium">{row.original.response_text}</div>
+        ),
+      },
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: responses.filter((item) => {
+      return item.response_text;
+    }),
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   useEffect(() => {
     const loadData = async () => {
       if (!testId) return;
@@ -78,6 +124,8 @@ const ResultsPage = () => {
 
         setTest(testResult.data);
         setResponses(responsesResult.data || []);
+
+        // console.log(responsesResult.data);
 
         const calculatedStats = calculateRorschachStats(
           responsesResult.data || []
@@ -185,33 +233,49 @@ const ResultsPage = () => {
                   <span className="font-semibold">
                     G= {stats.location.G.count}
                   </span>
-                  <span className="font-semibold">
+                  {/* <span className="font-semibold">
                     ,G%={stats.location.G.percentage}
-                  </span>
+                  </span> */}
+                  <PercentageWithLines
+                    label="G"
+                    percentage={stats.location.G.percentage}
+                  />
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
                     D= {stats.location.D.count}{" "}
                   </span>
-                  <span className="font-semibold">
+                  {/* <span className="font-semibold">
                     ,D%={stats.location.D.percentage}
-                  </span>
+                  </span> */}
+                  <PercentageWithLines
+                    label="D"
+                    percentage={stats.location.D.percentage}
+                  />
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
                     Dd= {stats.location.Dd.count}{" "}
                   </span>
-                  <span className="font-semibold">
+                  {/* <span className="font-semibold">
                     ,Dd%={stats.location.Dd.percentage}
-                  </span>
+                  </span> */}
+                  <PercentageWithLines
+                    label="Dd"
+                    percentage={stats.location.Dd.percentage}
+                  />
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
                     Dbl= {stats.location.Dbl.count}{" "}
                   </span>
-                  <span className="font-semibold">
+                  {/* <span className="font-semibold">
                     ,Dbl%={stats.location.Dbl.percentage}
-                  </span>
+                  </span> */}
+                  <PercentageWithLines
+                    label="Dbl"
+                    percentage={stats.location.Dbl.percentage}
+                  />
                 </div>
                 <div className="flex justify-between">
                   <span className="font-semibold">
@@ -285,7 +349,7 @@ const ResultsPage = () => {
                     CF= {stats.determinants.CF}
                   </span>
                 </div>
-                
+
                 <div className="flex justify-between">
                   <span className="font-semibold">
                     C= {stats.determinants.C}
@@ -294,7 +358,6 @@ const ResultsPage = () => {
                     C'= {stats.determinants.C_prime}
                   </span>
                 </div>
-                
               </div>
             </div>
 
@@ -479,9 +542,12 @@ const ResultsPage = () => {
                     <span className="text-sm font-medium">RC%</span>
                     <Badge>{stats.RC_percentage}%</Badge>
                   </div>
-                  <div className="flex justify-between items-center p-2 bg-muted rounded">
-                    <span className="text-sm font-medium">TRI</span>
-                    <Badge>{stats.TRI}</Badge>
+                  <div className="bg-muted rounded p-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">TRI</span>
+                      <Badge>{stats.TRI}</Badge>
+                    </div>
+                    <TRINote TRI={stats.TRI} />
                   </div>
                   <div className="flex justify-between items-center p-2 bg-muted rounded">
                     <span className="text-sm font-medium">F.compl</span>
@@ -560,11 +626,15 @@ const ResultsPage = () => {
                     <Badge variant="secondary">{stats.determinants.kob}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Movement dominates form (KF)</span>
+                    <span className="text-sm">
+                      Movement dominates form (KF)
+                    </span>
                     <Badge variant="secondary">{stats.determinants.KF}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Form dominates movement (FK)</span>
+                    <span className="text-sm">
+                      Form dominates movement (FK)
+                    </span>
                     <Badge variant="secondary">{stats.determinants.FK}</Badge>
                   </div>
                   {/* <div className="mt-4 p-2 bg-muted rounded">
@@ -607,13 +677,17 @@ const ResultsPage = () => {
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Achromatic color dominates form (C'F)</span>
+                    <span className="text-sm">
+                      Achromatic color dominates form (C'F)
+                    </span>
                     <Badge variant="secondary">
                       {stats.determinants.C_primeF}
                     </Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Form dominates achromatic color (FC')</span>
+                    <span className="text-sm">
+                      Form dominates achromatic color (FC')
+                    </span>
                     <Badge variant="secondary">
                       {stats.determinants.FC_prime}
                     </Badge>
@@ -791,6 +865,38 @@ const ResultsPage = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <footer className="container mx-auto p-4 space-y-6">
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </footer>
     </div>
   );
 };
