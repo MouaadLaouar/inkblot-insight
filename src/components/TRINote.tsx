@@ -20,37 +20,37 @@ function analyzeTRINote(note = "") {
   switch (true) {
     case X === 0 && Y === 0:
       name = "Coarite pur";
-      description = "This note indicates a complete absence of both K and C.";
+      description = "Blocage ou pauvrete reelle de l'expression (pathologique)";
       break;
 
     case X === 3 && Y === 3:
       name = "Ambetique";
-      description = "This note indicates a balanced presence of K and C.";
+      description = "Sujets douees";
       break;
 
     case X === 0 && Y > 0:
       name = "Extratensif pur";
-      description = "This note indicates a complete absence of K with a presence of C.";
+      description = "Emotif instable, besoins affectifs exprimes sans frein (enfants).";
       break;
 
     case X < Y:
       name = "Extratensif mixte";
-      description = "This note indicates a mixed presence of K and C, with more C than K.";
+      description = "Capable de ponderation des l'expression, les besoins (pathologique si exagere).";
       break;
 
     case Y === 0 && X > 0:
       name = "Intratensif pur";
-      description = "This note indicates a complete absence of C with a presence of K.";
+      description = "Caractere reserve, absorbe des monde imaginaire > reel";
       break;
 
     case X > Y:
       name = "Intratensif mixte";
-      description = "This note indicates a mixed presence of K and C, with more K than C.";
+      description = "+ impulsif, peut avoir des incidents explosifs.";
       break;
 
     default:
-      name = "Unclassified";
-      description = "This note does not match any defined TRI categories.";
+      name = "";
+      description = "";
   }
 
   return { name, description };

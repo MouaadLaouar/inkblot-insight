@@ -2,7 +2,7 @@ import { getLineLevel } from '@/lib/utils';
 import React from 'react'
 
 const PercentageWithLines = ({ label, percentage }) => {
-  const level = getLineLevel(percentage);
+  const level = getLineLevel(label, percentage);
   const absLevel = Math.abs(level);
   const isUnder = level < 0;
 
