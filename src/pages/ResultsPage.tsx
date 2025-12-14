@@ -495,19 +495,19 @@ const ResultsPage = () => {
                         {stats.determinants.F_plus} ({stats.F_plus_percentage}%)
                       </Badge>
                     </div>
-                    <Progress value={stats.F_plus_percentage} />
+                    <Progress value={stats.F_plus_percentage} keyName="F+" />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
                       <span className="text-sm">Poor Form (F-)</span>
-                      <Badge variant="destructive">
+                      <Badge variant="outline">
                         {stats.determinants.F_minus} ({stats.F_minus_percentage}
                         %)
                       </Badge>
                     </div>
                     <Progress
                       value={stats.F_minus_percentage}
-                      className="bg-destructive/20"
+                      keyName="F-"
                     />
                   </div>
                   <div>
@@ -518,7 +518,7 @@ const ResultsPage = () => {
                         {stats.F_extended_percentage}%)
                       </Badge>
                     </div>
-                    <Progress value={stats.F_extended_percentage} />
+                    <Progress value={stats.F_extended_percentage} keyName="F+-" />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
@@ -595,7 +595,7 @@ const ResultsPage = () => {
                         {value.count} responses ({value.percentage}%)
                       </span>
                     </div>
-                    <Progress value={value.percentage} className="h-3" />
+                    <Progress value={value.percentage} keyName={key} className="h-3" />
                   </div>
                 ))}
               </CardContent>
@@ -760,7 +760,7 @@ const ResultsPage = () => {
                       <span className="text-sm">H%</span>
                       <Badge>{stats.H_percentage}%</Badge>
                     </div>
-                    <Progress value={stats.H_percentage} />
+                    <Progress value={stats.H_percentage} keyName="H" />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex justify-between">
@@ -793,7 +793,7 @@ const ResultsPage = () => {
                       <span className="text-sm">A%</span>
                       <Badge>{stats.A_percentage}%</Badge>
                     </div>
-                    <Progress value={stats.A_percentage} />
+                    <Progress value={stats.A_percentage} keyName="A" />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex justify-between">
