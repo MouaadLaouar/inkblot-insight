@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  fullName  String?  @map("full_name")
+  role      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  patients Patient[]
+  tests    RorschachTest[]
+
+  @@map("users")
+}
+
+model Patient {
+  id                  String   @id @default(cuid())
+  firstName           String   @map("first_name")
+  lastName            String   @map("last_name")
+  medicalRecordNumber String   @map("medical_record_number")
+  dateOfBirth         String   @map("date_of_birth")
+  gender              String?
+  notes               String?
+  createdBy           String   @map("created_by")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user  User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  tests RorschachTest[]
+
+  @@unique([createdBy, medicalRecordNumber])
+  @@map("patients")
+}
+
+model RorschachTest {
+  id             String   @id @default(cuid())
+  patientId      String   @map("patient_id")
+  createdBy      String   @map("created_by")
+  testDate       String   @map("test_date")
+  status         String   @default("in_progress")
+  totalResponses Int      @default(0) @map("total_responses")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  patient   Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  responses TestResponse[]
+
+  @@map("rorschach_tests")
+}
+
+model TestResponse {
+  id                String   @id @default(cuid())
+  testId            String   @map("test_id")
+  cardNumber        Int      @map("card_number")
+  responseNumber    Int      @map("response_number")
+  responseText      String   @map("response_text")
+  location          String
+  determinants      String
+  contentCategories String   @map("content_categories")
+  ban               Boolean  @default(false)
+  obs               String?
+  intenseTime       Int?     @map("intense_time")
+  responseTime      Int?     @map("response_time")
+  formQuality       String?  @map("form_quality")
+  cValue            String?  @map("c_value")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  test RorschachTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@map("test_responses")
+}
