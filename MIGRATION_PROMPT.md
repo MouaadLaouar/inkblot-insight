@@ -541,5 +541,326 @@ Report any issues found with steps to reproduce.
 
 ---
 
+## LANDING PAGE PROMPT
+
+After the core migration is complete (or in parallel), create the marketing landing page:
+
+```
+Create a professional landing page for Inkblot Insight, a Rorschach test scoring application for the Algerian market.
+
+## TARGET AUDIENCE
+- Psychology students (free plan)
+- Independent psychologists (practitioner plans)
+- Institutions: hospitals, clinics, universities (institution plans)
+
+## LANGUAGE
+French (primary audience is Algeria)
+
+## PAGE STRUCTURE
+
+### 1. Navigation (Sticky)
+- Logo: "Inkblot Insight"
+- Links: Fonctionnalités, Tarifs, FAQ
+- Buttons: Connexion (outline), Essayer Gratuit (primary)
+
+### 2. Hero Section
+**Headline:** "La cotation Rorschach simplifiée pour les professionnels"
+**Subheadline:** "Cotez vos tests en quelques clics, générez des psychogrammes précis, et concentrez-vous sur vos patients."
+**CTAs:** "Commencer Gratuitement" + "Voir la Démo"
+**Trust badges:** Gratuit pour étudiants, Sans carte bancaire, Export PDF professionnel
+**Visual:** Dashboard/psychogram screenshot or animation
+
+### 3. Features Section (6 cards)
+1. 🎯 Cotation Intuitive - Selection interface for scoring
+2. 📊 Psychogramme Automatique - All indices calculated (R, TRI, F%, RC%, G%, D%)
+3. 📄 Export PDF Professionnel - Customizable reports with logo
+4. 👥 Gestion Patients - Complete records, history, notes
+5. 🔒 Sécurité Maximale - HTTPS, encryption, daily backups
+6. 📱 Multi-Plateforme - Access from any device
+
+### 4. How It Works (3 steps)
+1. Créez votre patient - Add patient info
+2. Cotez les réponses - Score each card (1-10)
+3. Analysez les résultats - Auto-generated psychogram
+
+### 5. Tests Available
+- Rorschach (10 planches) ✅
+- BDI-II (Beck Depression) ✅
+- BAI (Beck Anxiety) ✅
+- Hamilton Depression ✅
+- TAT 🔜 Coming soon
+
+### 6. Pricing Section
+
+**Toggle:** Mensuel / Annuel (-17%)
+
+**Plan 1: Étudiant (GRATUIT)**
+- 3 patients max
+- 5 tests/mois
+- Psychogramme basique
+- Support email
+- Eligibility: .edu.dz email or student certificate
+- CTA: "S'inscrire Gratuitement"
+
+**Plan 2: Praticien (2,500 DZD/mois or 25,000 DZD/an)**
+- Badge: "Populaire"
+- Patients illimités
+- Tests illimités
+- Export PDF
+- Notes & fichiers (5 GB)
+- Support WhatsApp
+- CTA: "Commencer"
+
+**Plan 3: Praticien+ (4,500 DZD/mois or 45,000 DZD/an)**
+- Everything in Praticien, plus:
+- Calendrier intégré
+- RDV en ligne
+- Facturation
+- Suivi paiements
+- Notes SOAP
+- 20 GB storage
+- Support prioritaire (<4h)
+- CTA: "Commencer"
+
+**Plan 4: Institution (Dès 110,000 DZD/an)**
+- 5 users: 110,000 DZD/an (1,833 DZD/user/mois)
+- 10 users: 180,000 DZD/an (1,500 DZD/user/mois) ⭐ Populaire
+- 20 users: 300,000 DZD/an (1,250 DZD/user/mois)
+- 50 users: 600,000 DZD/an (1,000 DZD/user/mois)
+- Features: Shared patient base, admin dashboard, roles, logo on PDFs, on-site training
+- CTA: "Demander un Devis"
+
+### 7. Comparison Table (Collapsible)
+Show all features across plans with ✅/❌
+
+### 8. Testimonials
+3 placeholder testimonials from:
+- Dr. Amina B., Psychologue clinicienne, Alger
+- Karim M., Master 2 Psychologie, Université d'Oran
+- Service Psychiatrie, CHU Mustapha Pacha
+
+### 9. FAQ Section (Accordion)
+Questions to include:
+- Comment fonctionne le plan Étudiant gratuit ?
+- Mes données sont-elles sécurisées ?
+- Puis-je exporter mes données si je quitte ?
+- Quels moyens de paiement acceptez-vous ?
+- Puis-je changer de plan ?
+- Proposez-vous des formations ?
+
+### 10. CTA Section
+Gradient background with:
+"Prêt à moderniser votre pratique ?"
+"Rejoignez les psychologues qui gagnent du temps et améliorent la qualité de leurs évaluations."
+CTA: "Commencer Gratuitement"
+
+### 11. Footer
+- Logo + tagline
+- Columns: Produit, Support, Légal
+- Contact: email, WhatsApp
+- Copyright: © 2026 Inkblot Insight
+
+## TECHNICAL REQUIREMENTS
+
+### File Structure
+app/
+├── (marketing)/
+│   ├── layout.tsx       # No auth required
+│   └── page.tsx         # Landing page
+└── components/landing/
+    ├── nav.tsx
+    ├── hero.tsx
+    ├── features.tsx
+    ├── how-it-works.tsx
+    ├── tests-available.tsx
+    ├── pricing.tsx
+    ├── pricing-card.tsx
+    ├── pricing-toggle.tsx
+    ├── testimonials.tsx
+    ├── faq.tsx
+    ├── cta-section.tsx
+    └── footer.tsx
+
+### Components to Use
+- Reuse ShadCN: Button, Card, Badge, Accordion, Switch, Tabs
+- Create: PricingCard, PricingToggle, FeatureCard, TestimonialCard
+
+### Design Specifications
+- Use existing color system (primary: blue, secondary: teal)
+- Gradient backgrounds for hero and CTA sections
+- Card shadows and hover effects
+- Responsive: 1 col mobile, 2 col tablet, 3-4 col desktop
+- Animations: fade-up on scroll, stagger for feature cards
+
+### SEO
+<title>Inkblot Insight - Cotation Rorschach Professionnelle | Psychologues Algérie</title>
+<meta name="description" content="Outil professionnel de cotation du test de Rorschach pour psychologues. Psychogramme automatique, export PDF, gestion patients. Gratuit pour étudiants.">
+
+### Data File
+Create lib/pricing-data.ts with all pricing plans and features for easy maintenance.
+
+## DELIVERABLES
+1. Landing page at / (marketing route group)
+2. All landing page components
+3. Pricing data file
+4. Responsive design
+5. Smooth scroll navigation
+6. Pricing toggle (monthly/yearly)
+7. FAQ accordion
+8. Contact form or mailto links
+```
+
+---
+
+## STEP-BY-STEP LANDING PAGE PROMPTS
+
+### Landing Page Prompt 1: Setup & Navigation
+```
+Set up the landing page structure for Inkblot Insight:
+
+1. Create app/(marketing)/layout.tsx - Layout without auth
+2. Create app/(marketing)/page.tsx - Main landing page
+3. Create components/landing/nav.tsx - Sticky navigation with:
+   - Logo (left)
+   - Links: Fonctionnalités, Tarifs, FAQ (center)
+   - Buttons: Connexion, Essayer Gratuit (right)
+   - Smooth scroll to sections
+   - Transparent → white background on scroll
+4. Create lib/pricing-data.ts with all plan data
+
+Use existing design system colors and ShadCN Button component.
+```
+
+### Landing Page Prompt 2: Hero Section
+```
+Create the hero section for Inkblot Insight landing page:
+
+components/landing/hero.tsx:
+- Full viewport height (min-height: 100vh - nav)
+- Gradient background (blue to teal, subtle)
+- Two columns on desktop (text left, visual right)
+- Content:
+  - H1: "La cotation Rorschach simplifiée pour les professionnels"
+  - Subheadline with value proposition
+  - Two CTAs: "Commencer Gratuitement" (primary), "Voir la Démo" (outline)
+  - Trust badges below CTAs
+- Right side: Dashboard screenshot or animated psychogram preview
+- Responsive: Stack on mobile
+
+Add animation: Fade up on load
+```
+
+### Landing Page Prompt 3: Features Section
+```
+Create the features section:
+
+components/landing/features.tsx:
+- Section title: "Tout ce dont vous avez besoin pour une cotation rapide et professionnelle"
+- 6 feature cards in responsive grid (1/2/3 columns)
+- Each card has: icon, title, description
+- Feature data from constants (don't hardcode)
+- Cards: hover effect with shadow increase
+- Animation: Stagger fade-up on scroll
+
+Features:
+1. Cotation Intuitive - Interface de sélection intuitive
+2. Psychogramme Automatique - Tous les indices calculés
+3. Export PDF Professionnel - Rapports personnalisables
+4. Gestion Patients - Dossiers complets, historique
+5. Sécurité Maximale - Chiffrement, sauvegardes
+6. Multi-Plateforme - Tous appareils
+```
+
+### Landing Page Prompt 4: How It Works
+```
+Create the "How it works" section:
+
+components/landing/how-it-works.tsx:
+- 3-step horizontal process on desktop, vertical on mobile
+- Each step: number badge, title, description, optional screenshot
+- Connecting lines between steps (desktop)
+- Steps:
+  1. Créez votre patient
+  2. Cotez les réponses (cards 1-10)
+  3. Analysez les résultats (psychogram)
+
+Simple, clean design with subtle animations.
+```
+
+### Landing Page Prompt 5: Pricing Section
+```
+Create the pricing section with all plans:
+
+components/landing/pricing.tsx - Main section container
+components/landing/pricing-toggle.tsx - Monthly/Yearly switch
+components/landing/pricing-card.tsx - Individual plan card
+
+Requirements:
+1. Toggle switches between monthly/yearly prices
+2. Yearly shows "2 mois GRATUITS" badge
+3. Four pricing cards:
+   - Étudiant (GRATUIT)
+   - Praticien (2,500 DZD/mois) - with "Populaire" badge
+   - Praticien+ (4,500 DZD/mois)
+   - Institution (Dès 110,000 DZD/an)
+
+4. Each card shows:
+   - Plan name
+   - Price (switches with toggle)
+   - Feature list with checkmarks
+   - CTA button
+
+5. Institution card has expandable section showing 5/10/20/50 user pricing
+
+Use pricing data from lib/pricing-data.ts
+Responsive: 1 col mobile, 2 col tablet, 4 col desktop
+```
+
+### Landing Page Prompt 6: Testimonials & FAQ
+```
+Create testimonials and FAQ sections:
+
+components/landing/testimonials.tsx:
+- Section title: "Ce qu'en disent nos utilisateurs"
+- 3 testimonial cards in row (carousel on mobile)
+- Each card: quote, name, title, organization
+- Placeholder testimonials (to be replaced with real ones)
+
+components/landing/faq.tsx:
+- Section title: "Questions Fréquentes"
+- Use ShadCN Accordion component
+- 8 FAQ items from pricing document
+- Expandable/collapsible
+- Link at bottom: "Voir toutes les questions →"
+```
+
+### Landing Page Prompt 7: CTA & Footer
+```
+Create the final CTA and footer sections:
+
+components/landing/cta-section.tsx:
+- Gradient background (primary to secondary)
+- Centered content
+- Headline: "Prêt à moderniser votre pratique ?"
+- Subheadline about joining other psychologists
+- Large CTA button: "Commencer Gratuitement"
+- Trust text: "Pas de carte bancaire requise"
+
+components/landing/footer.tsx:
+- Dark background
+- Logo with tagline
+- 3 columns of links:
+  - Produit: Fonctionnalités, Tarifs, Démo
+  - Support: Contact, FAQ, Documentation
+  - Légal: Conditions d'utilisation, Confidentialité
+- Contact info: email, WhatsApp
+- Copyright line
+- "Conçu avec ♥ en Algérie"
+
+Responsive layout, proper spacing.
+```
+
+---
+
 *Prompt Version: 1.0*
 *Compatible with: Claude 3.5 Sonnet, Claude Opus, GPT-4*
